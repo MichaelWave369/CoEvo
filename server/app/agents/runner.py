@@ -109,6 +109,29 @@ def _memory_hint(agent_handle: str, user_handles: list[str]) -> str:
         return ""
     return "Relevant memory snippets from past interactions:\n" + "\n".join(hints)
 
+
+
+def _topic_tokens(text: str) -> list[str]:
+    words = re.findall(r"[a-zA-Z]{4,}", text.lower())
+    stop = {"that","this","with","from","have","your","what","when","where","which","about","thread","agent","users","into","just","they","them"}
+    return [w for w in words if w not in stop][:40]
+
+
+def _track_topic(text: str):
+    mem = _load_memory()
+    topics = mem.get("__topics__", {})
+    for tok in _topic_tokens(text):
+        topics[tok] = int(topics.get(tok, 0)) + 1
+    mem["__topics__"] = topics
+    _save_memory(mem)
+
+
+def _top_topics(limit: int = 3) -> list[str]:
+    mem = _load_memory()
+    topics = mem.get("__topics__", {})
+    pairs = sorted(topics.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+    return [k for k, _ in pairs]
+
 def _mode_line(mode: str) -> str:
     return {
         "peer": "Peer mode: collaborate, present options, and explain tradeoffs.",
@@ -134,6 +157,8 @@ General behavior rules:
 - Never claim actions you did not perform.
 
 Current style: {base['style']}.
+Community currently talks most about: {", ".join(_top_topics()) if _top_topics() else "general collaboration"}.
+Let this subtly influence your tone and references.
 {_mode_line(mode)}"""
 
 
@@ -329,6 +354,7 @@ async def agent_loop(node_priv):
             if author_type == "user" and author_handle:
                 for a in agents:
                     _remember_interaction(a.handle, author_handle, content)
+                    _track_topic(content)
 
             t = session.get(Thread, thread_id)
             if not t:
@@ -368,6 +394,12 @@ async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id:
                 mentioned_users.append(u.handle)
     memory_hint = _memory_hint(agent.handle, mentioned_users)
     latest_text = posts[-1].content_md if posts else ""
+    disagreement_hint = ""
+    recent_agents = [p for p in posts[-6:] if p.author_type == "agent"]
+    if agent.handle.lower() in ("forge", "echo") and recent_agents:
+        other = "echo" if agent.handle.lower() == "forge" else "forge"
+        if any((session.get(Agent, rp.author_agent_id).handle.lower() == other) if rp.author_agent_id and session.get(Agent, rp.author_agent_id) else False for rp in recent_agents):
+            disagreement_hint = f"If appropriate, respectfully disagree with @{other} from your personality perspective, while staying constructive."
     if agent.handle.lower() == "forge" and _needs_forge_code_action(latest_text):
         try:
             code_out = await _nevora_translate("code", latest_text)
@@ -391,6 +423,7 @@ Recent thread context (oldest -> newest):
 {context}
 
 {memory_hint}
+{disagreement_hint}
 
 Write @{agent.handle}'s next message. If useful, tag another agent with @handle."""
 
@@ -504,3 +537,47 @@ async def _post_daily_digests(node_priv):
                 out = f"(digest unavailable: {e})"
             body = f"**Daily digest by @{a.handle}**\n\n{out}"
             await _store_agent_post(session, node_priv, a, thread.id, body)
+
+
+async def weekly_report_loop(node_priv):
+    while settings.AGENT_ENABLED:
+        await _post_weekly_report(node_priv)
+        await __import__("asyncio").sleep(60 * 60 * 24)
+
+
+async def _post_weekly_report(node_priv):
+    from datetime import datetime, timedelta
+    if datetime.utcnow().weekday() != 0:
+        return
+    with Session(engine) as session:
+        sage = session.exec(select(Agent).where(Agent.handle=="sage", Agent.is_enabled==True)).first()
+        if not sage:
+            return
+        since = datetime.utcnow() - timedelta(days=7)
+        posts = session.exec(select(Post).where(Post.created_at >= since).order_by(Post.id.desc()).limit(400)).all()
+        if not posts:
+            return
+        threads = {}
+        for p in posts:
+            threads[p.thread_id] = threads.get(p.thread_id, 0) + 1
+        top_threads = sorted(threads.items(), key=lambda kv: kv[1], reverse=True)[:5]
+        from ..models import Bounty
+        paid = session.exec(select(Bounty).where(Bounty.status=="paid", Bounty.closed_at >= since)).all()
+        new_users = session.exec(select(User).where(User.created_at >= since)).all()
+        mood = "energized" if len(posts) > 100 else ("steady" if len(posts) > 40 else "quiet")
+        summary_input = f"Top threads by activity: {top_threads}. Paid bounties: {len(paid)}. New members: {len(new_users)}. Mood: {mood}."
+        prompt = _agent_persona("sage", "assistant")
+        user_prompt = f"Write a weekly human-readable community report for CoEvo. Include top threads, notable completed bounties, new members, and mood reading.\nData: {summary_input}"
+        try:
+            text = await _generate_text(sage.model, prompt, user_prompt, max_tokens=340)
+        except Exception as e:
+            text = f"Weekly report unavailable: {e}"
+        board = session.exec(select(Board).where(Board.slug=="general")).first()
+        if not board:
+            return
+        thread = session.exec(select(Thread).where(Thread.board_id==board.id).order_by(Thread.id.desc())).first()
+        if not thread:
+            thread = Thread(board_id=board.id, title="Weekly Community Report")
+            session.add(thread); session.commit(); session.refresh(thread)
+        body = f"**Weekly report by @sage**\n\n{text}"
+        await _store_agent_post(session, node_priv, sage, thread.id, body)

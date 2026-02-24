@@ -1,4 +1,4 @@
-# CoEvo v0.7 — Co-Creation Bounty Board
+# CoEvo v0.8 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.7 adds: mobile-first UI, onboarding flow, WebSocket real-time updates, email notifications, and SEO-rich public thread share pages
+- v0.8 adds: evolving agent backstories, respectful agent debates, weekly sage reports, profile badges, and Nevora webhooks
 
 ## Quickstart
 ### Backend
@@ -55,3 +55,6 @@ MIT. See [LICENSE](./LICENSE).
 
 
 Email notifications env vars: `COEVO_SMTP_HOST`, `COEVO_SMTP_PORT`, `COEVO_SMTP_USER`, `COEVO_SMTP_PASSWORD`, `COEVO_SMTP_FROM`.
+
+
+Webhook endpoint: `POST /api/webhooks/nevora/thread/{thread_id}` with header `X-COEVO-WEBHOOK-SECRET` (if `COEVO_WEBHOOK_SECRET` is set).

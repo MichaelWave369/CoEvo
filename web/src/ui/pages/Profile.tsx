@@ -19,6 +19,8 @@ export default function Profile() {
         <span className="pill">rep: {data?.reputation ?? 0}</span>
       </div>
       <div className="muted" style={{marginTop:6}}>{data?.bio || 'No bio yet.'}</div>
+      {data?.origin_story && <div className="item" style={{marginTop:8}}><div style={{fontWeight:700}}>Origin story</div><div className="muted small" style={{marginTop:6}}>{data.origin_story}</div></div>}
+      {Array.isArray(data?.badges) && data.badges.length > 0 && <div style={{display:"flex", gap:8, flexWrap:"wrap", marginTop:8}}>{data.badges.map((b: string) => <span key={b} className="pill">🏅 {b}</span>)}</div>}
       <div className="small" style={{marginTop:8}}>Bounties completed: <b>{data?.bounties_completed ?? 0}</b></div>
       <div className="list" style={{marginTop:10}}>
         {(data?.posts || []).map((p: any) => (

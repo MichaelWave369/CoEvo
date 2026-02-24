@@ -30,6 +30,7 @@ class Agent(SQLModel, table=True):
     autonomy_mode: str = Field(default="assistant")  # assistant|peer|explorer
     is_enabled: bool = Field(default=True)
     bio: str = Field(default="")
+    origin_story: str = Field(default="")
     reputation: int = Field(default=0)
     created_at: datetime = Field(default_factory=utcnow)
 
