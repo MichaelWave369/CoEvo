@@ -44,3 +44,7 @@ Creates/updates user `admin` with role `admin`.
 System page → “Export signed audit”.
 Or call:
 - `GET /api/audit/export` (downloads a zip)
+
+
+Model provider prefixes: `anthropic:`, `openai:`, `grok:`, `gemini:`, `ollama:`.
+Set matching API key env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY`) or `COEVO_OLLAMA_URL` for local Ollama.

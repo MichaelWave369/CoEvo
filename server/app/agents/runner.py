@@ -161,6 +161,93 @@ def _needs_nova_creative_action(latest_text: str) -> bool:
     return any(k in txt for k in ["story", "world", "lore", "creative", "scene", "describe a world"])
 
 
+def _provider_and_model(model_ref: str) -> tuple[str, str]:
+    if ":" in model_ref:
+        provider, model = model_ref.split(":", 1)
+        return provider.lower().strip(), model.strip()
+    return "anthropic", model_ref.strip()
+
+
+async def _openai_compatible_generate(base_url: str, api_key: str, model: str, system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
+    if not api_key:
+        raise RuntimeError("Provider API key is not set")
+    headers = {"Authorization": f"Bearer {api_key}", "content-type": "application/json"}
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.6,
+        "max_tokens": max_tokens,
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(base_url.rstrip("/")+"/chat/completions", headers=headers, json=payload)
+        r.raise_for_status()
+        d = r.json()
+    return ((d.get("choices") or [{}])[0].get("message") or {}).get("content", "").strip()
+
+
+async def _gemini_generate(model: str, system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
+    key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    payload = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+        "generationConfig": {"temperature": 0.6, "maxOutputTokens": max_tokens},
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(url, json=payload)
+        r.raise_for_status()
+        d = r.json()
+    candidates = d.get("candidates") or []
+    if not candidates:
+        return ""
+    parts = (((candidates[0] or {}).get("content") or {}).get("parts") or [])
+    return "\n".join([p.get("text", "") for p in parts]).strip()
+
+
+async def _ollama_generate(model: str, system_prompt: str, user_prompt: str) -> str:
+    url = os.getenv("COEVO_OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/api/generate"
+    prompt = f"{system_prompt}\n\n{user_prompt}"
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(url, json={"model": model, "prompt": prompt, "stream": False})
+        r.raise_for_status()
+        d = r.json()
+    return (d.get("response") or "").strip()
+
+
+async def _generate_text(model_ref: str, system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
+    provider, model = _provider_and_model(model_ref)
+    if provider == "anthropic":
+        return await _anthropic_generate(model, system_prompt, user_prompt, max_tokens=max_tokens)
+    if provider == "openai":
+        return await _openai_compatible_generate(
+            os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            os.getenv("OPENAI_API_KEY", "").strip(),
+            model,
+            system_prompt,
+            user_prompt,
+            max_tokens=max_tokens,
+        )
+    if provider == "grok":
+        return await _openai_compatible_generate(
+            os.getenv("XAI_BASE_URL", "https://api.x.ai/v1"),
+            os.getenv("XAI_API_KEY", "").strip(),
+            model,
+            system_prompt,
+            user_prompt,
+            max_tokens=max_tokens,
+        )
+    if provider == "gemini":
+        return await _gemini_generate(model, system_prompt, user_prompt, max_tokens=max_tokens)
+    if provider == "ollama":
+        return await _ollama_generate(model, system_prompt, user_prompt)
+    raise RuntimeError(f"Unsupported model provider: {provider}")
+
+
 async def _anthropic_generate(model: str, system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
@@ -309,7 +396,7 @@ Write @{agent.handle}'s next message. If useful, tag another agent with @handle.
 
     model = agent.model.split(":", 1)[-1] if ":" in agent.model else agent.model
     try:
-        reply = await _anthropic_generate(model, system_prompt, user_prompt)
+        reply = await _generate_text(agent.model, system_prompt, user_prompt)
     except Exception as e:
         reply = f"(agent runner error calling Anthropic: {e})"
 
@@ -334,7 +421,7 @@ Output:
 
     model = forge.model.split(":", 1)[-1] if ":" in forge.model else forge.model
     try:
-        analysis = await _anthropic_generate(model, system_prompt, user_prompt, max_tokens=300)
+        analysis = await _generate_text(forge.model, system_prompt, user_prompt, max_tokens=300)
     except Exception as e:
         analysis = f"(forge analysis unavailable: {e})"
 
@@ -412,7 +499,7 @@ async def _post_daily_digests(node_priv):
             user_prompt = f"Summarize the community's last 24h in your own voice. Source snippets:\n{summary_source}"
             model = a.model.split(":",1)[-1] if ":" in a.model else a.model
             try:
-                out = await _anthropic_generate(model, prompt, user_prompt, max_tokens=260)
+                out = await _generate_text(a.model, prompt, user_prompt, max_tokens=260)
             except Exception as e:
                 out = f"(digest unavailable: {e})"
             body = f"**Daily digest by @{a.handle}**\n\n{out}"

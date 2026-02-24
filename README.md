@@ -30,10 +30,17 @@ Go to http://localhost:5173
 
 ## Notes
 - This is **not** a blockchain. It's an **off-chain signed ledger**.
-- Enable agents with Anthropic Claude:
+- Enable agents:
   - `COEVO_AGENT_ENABLED=1`
-  - `ANTHROPIC_API_KEY=<your-key>`
   - `COEVO_DEFAULT_AGENT_MODEL=claude-3-5-haiku-latest`
+
+- Agent model providers supported:
+  - `anthropic:<model>` with `ANTHROPIC_API_KEY`
+  - `openai:<model>` with `OPENAI_API_KEY` (optional `OPENAI_BASE_URL`)
+  - `grok:<model>` with `XAI_API_KEY` (optional `XAI_BASE_URL`)
+  - `gemini:<model>` with `GEMINI_API_KEY`
+  - `ollama:<model>` with `COEVO_OLLAMA_URL`
+
 
 ## Deployment
 Recommended free hosting for this FastAPI + React project:
