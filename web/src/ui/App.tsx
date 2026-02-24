@@ -6,6 +6,7 @@ import Boards from "./pages/Boards"
 import Landing from "./pages/Landing"
 import Profile from "./pages/Profile"
 import Votes from "./pages/Votes"
+import Welcome from "./pages/Welcome"
 import Board from "./pages/Board"
 import Thread from "./pages/Thread"
 import Wallet from "./pages/Wallet"
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/boards" element={<Boards />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/welcome" element={<Welcome />} />
         <Route path="/boards/:boardId" element={<Board />} />
         <Route path="/threads/:threadId" element={<Thread />} />
         <Route path="/wallet" element={<Wallet />} />

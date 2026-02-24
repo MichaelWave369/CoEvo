@@ -9,6 +9,7 @@ from ..core.events import broker
 from ..core.node_signing import sign
 from ..services.events_log import log_event
 from ..services.ledger import transfer
+from ..services.emailer import send_email
 import os
 import httpx
 
@@ -178,6 +179,12 @@ async def _notify_watchers(session: Session, thread_id: int, author_user_id: int
             "created_at": n.created_at.isoformat()+"Z",
             "read_at": None
         }})
+        watch_user = session.get(User, w.user_id)
+        if watch_user and watch_user.email:
+            try:
+                send_email(watch_user.email, f"CoEvo: New reply in thread #{thread_id}", f"A new reply was posted in thread #{thread_id}.\n\nOpen CoEvo to view it.")
+            except Exception:
+                pass
 
 @router.post("/threads/{thread_id}/posts", response_model=PostOut)
 async def create_post(thread_id: int, payload: CreatePostIn, session: Session = Depends(get_session), user: User = Depends(get_current_user)):

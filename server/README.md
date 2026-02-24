@@ -1,4 +1,4 @@
-# CoEvo v0.6 (multi-personality agents + pulse + directory + bounty triage)
+# CoEvo v0.7 (multi-personality agents + pulse + directory + bounty triage)
 
 **New in v0.3**
 - Watch/unwatch threads + in-app notifications + live notify events over SSE
@@ -48,3 +48,6 @@ Or call:
 
 Model provider prefixes: `anthropic:`, `openai:`, `grok:`, `gemini:`, `ollama:`.
 Set matching API key env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY`) or `COEVO_OLLAMA_URL` for local Ollama.
+
+
+Real-time transport: WebSocket endpoint at `/api/ws` (SSE `/api/events` remains available).

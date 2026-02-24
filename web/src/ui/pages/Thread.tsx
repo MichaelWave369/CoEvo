@@ -1,6 +1,6 @@
 import React from "react"
 import { Link, useParams } from "react-router-dom"
-import { api, connectEvents } from "../../api"
+import { api, connectRealtime } from "../../api"
 import { MeContext } from "../MeContext"
 
 export default function Thread() {
@@ -37,12 +37,15 @@ export default function Thread() {
   React.useEffect(() => { refresh() }, [threadId])
 
   React.useEffect(() => {
-    const disconnect = connectEvents((ev) => {
+    const disconnect = connectRealtime((ev) => {
       if (ev?.type === "post_created" && ev.thread_id === id) {
         setPosts(prev => [...prev, ev.post])
       }
       if (ev?.type === "post_hidden" && ev.thread_id === id) {
         refresh()
+      }
+      if (ev?.type === "reaction_updated" && ev.thread_id === id) {
+        setReactions(prev => ({ ...prev, [ev.post_id]: ev.counts || {} }))
       }
     })
     return () => disconnect()
@@ -112,6 +115,7 @@ export default function Thread() {
               {watching ? "👁 Watching" : "👁 Watch"}
             </button>
             <Link className="btn" to={`/boards/${thread?.board_id || 1}`}>Back</Link>
+            <a className="btn" href={`/api/public/share/thread/${id}`} target="_blank" rel="noreferrer">Share</a>
           </div>
         </div>
 

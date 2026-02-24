@@ -126,3 +126,14 @@ export function connectEvents(onMessage: (ev: any) => void) {
   es.onerror = () => {}
   return () => es.close()
 }
+
+
+export function connectRealtime(onMessage: (ev: any) => void) {
+  const wsBase = API_BASE ? API_BASE.replace(/^http/, "ws") : ""
+  const ws = new WebSocket((wsBase || `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`) + `/api/ws`)
+  ws.onmessage = (e) => {
+    try { onMessage(JSON.parse(e.data)) } catch {}
+  }
+  ws.onerror = () => {}
+  return () => ws.close()
+}

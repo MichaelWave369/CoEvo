@@ -8,6 +8,7 @@ from ..deps import get_current_user
 from ..services.ledger import get_or_create_system_wallet, transfer
 from ..services.events_log import log_event
 from ..core.events import broker
+from ..services.emailer import send_email
 
 router = APIRouter(prefix="/api/bounties", tags=["bounties"])
 
@@ -95,6 +96,12 @@ def claim_bounty(bounty_id: int, session: Session = Depends(get_session), user=D
     b.claimed_by_user_id = user.id
     session.add(b)
     session.commit()
+    creator = session.get(User, b.creator_user_id)
+    if creator and creator.email:
+        try:
+            send_email(creator.email, f"CoEvo: Bounty #{b.id} was claimed", f"Your bounty '{b.title}' now has a taker (@{user.handle}).")
+        except Exception:
+            pass
     log_event(session, "bounty_claimed", {"bounty_id": b.id, "by": user.handle})
     return {"ok": True}
 

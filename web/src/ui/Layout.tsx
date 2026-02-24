@@ -1,6 +1,6 @@
 import React from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { setToken, api, connectEvents } from "../api"
+import { setToken, api, connectRealtime } from "../api"
 import { MeContext, Me, Notif } from "./MeContext"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!me) return
-    const disconnect = connectEvents((ev) => {
+    const disconnect = connectRealtime((ev) => {
       if (ev?.type === "notify" && ev.user_id === me.id) {
         setUnread(u => u + 1)
         setNotifs(prev => [ev.notification, ...prev].slice(0, 25))

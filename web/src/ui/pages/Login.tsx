@@ -24,7 +24,8 @@ export default function Login() {
       await api.login(handle, password)
       const me = await api.me()
       setMe(me)
-      nav("/")
+      if (!localStorage.getItem("coevo_onboarded")) nav("/welcome")
+      else nav("/boards")
     } catch (e: any) {
       setError(e.message || "Failed")
     } finally {

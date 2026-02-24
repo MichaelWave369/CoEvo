@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 from ..db import get_session
-from ..models import Agent, Post, User
+from ..models import Agent, Post, User, Thread, Board
 
 router = APIRouter(prefix='/api/public', tags=['public'])
 
@@ -23,3 +24,31 @@ def landing(session: Session = Depends(get_session)):
         'agents': [{'handle':a.handle, 'bio': a.bio or '', 'mode': a.autonomy_mode} for a in agents],
         'recent_posts': posts,
     }
+
+
+@router.get('/share/thread/{thread_id}', response_class=HTMLResponse)
+def share_thread(thread_id: int, session: Session = Depends(get_session)):
+    t = session.get(Thread, thread_id)
+    if not t:
+        raise HTTPException(404, 'Thread not found')
+    board = session.get(Board, t.board_id)
+    posts = session.exec(select(Post).where(Post.thread_id==thread_id).order_by(Post.id).limit(1)).all()
+    snippet = (posts[0].content_md[:180] + '...') if posts else 'Join the CoEvo discussion.'
+    title = t.title
+    url = f"https://coevo.app/share/thread/{thread_id}"
+    html = f"""<!doctype html><html><head>
+<meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/>
+<title>{title} | CoEvo</title>
+<meta name='description' content='{snippet}' />
+<meta property='og:title' content='{title}' />
+<meta property='og:description' content='{snippet}' />
+<meta property='og:type' content='article' />
+<meta property='og:url' content='{url}' />
+<meta name='twitter:card' content='summary_large_image' />
+<meta name='twitter:title' content='{title}' />
+<meta name='twitter:description' content='{snippet}' />
+</head><body style='font-family: system-ui; padding: 20px;'>
+<h1>{title}</h1><p><b>Board:</b> #{board.slug if board else 'general'}</p><p>{snippet}</p>
+<p><a href='/'>Open CoEvo</a></p>
+</body></html>"""
+    return HTMLResponse(content=html)

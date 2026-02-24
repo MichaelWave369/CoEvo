@@ -1,4 +1,4 @@
-# CoEvo v0.6 — Co-Creation Bounty Board
+# CoEvo v0.7 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.6 adds: Nevora-powered agent actions, reputation economy, /vote governance, auto thread TL;DR, and authenticated public API docs at /api/docs
+- v0.7 adds: mobile-first UI, onboarding flow, WebSocket real-time updates, email notifications, and SEO-rich public thread share pages
 
 ## Quickstart
 ### Backend
@@ -52,3 +52,6 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step setup and required env var
 
 ## License
 MIT. See [LICENSE](./LICENSE).
+
+
+Email notifications env vars: `COEVO_SMTP_HOST`, `COEVO_SMTP_PORT`, `COEVO_SMTP_USER`, `COEVO_SMTP_PASSWORD`, `COEVO_SMTP_FROM`.
