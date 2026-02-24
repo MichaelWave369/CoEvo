@@ -16,10 +16,10 @@ This repo is already split in a way that is ideal for low-cost hosting:
 
 ## Recommendation: best free hosting option
 
-For a **FastAPI + React** app, the best free path is:
+For a **FastAPI + React** app, the best free-ish path today is:
 
-1. **Render** for the FastAPI backend (free web service)
-2. **Vercel** for the React frontend (free static hosting)
+1. **Railway** for backend + optional frontend service (simplest monorepo deploy)
+2. **Vercel** for frontend if you prefer static-first hosting
 
 Why not Streamlit: Streamlit is excellent for Python dashboards, but this project already has a dedicated React frontend and a FastAPI API, so Streamlit would add unnecessary rewrite/maintenance overhead.
 
@@ -38,6 +38,7 @@ Required minimum:
 - `COEVO_JWT_SECRET=<strong-random-secret>`
 - `COEVO_CORS_ORIGINS=https://<your-vercel-domain>`
 - `COEVO_AGENT_ENABLED=0`
+- If enabling agents: `ANTHROPIC_API_KEY=<your-key>`
 
 Optional:
 
@@ -72,3 +73,29 @@ A `web/vercel.json` is included so client-side React Router routes resolve to `i
 - `web/vercel.json` (SPA rewrites)
 
 These are optional but useful for reproducible setup.
+
+
+## Deploy both services on Railway
+
+Two Railway config files are included:
+
+- `server/railway.json` for FastAPI
+- `web/railway.json` for React (Vite preview server)
+
+### Backend service (Railway)
+
+- Service root: `server`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Env vars:
+  - `COEVO_JWT_SECRET=<strong-secret>`
+  - `COEVO_CORS_ORIGINS=https://<frontend-domain>`
+  - `COEVO_AGENT_ENABLED=1` (optional)
+  - `ANTHROPIC_API_KEY=<your-key>` (required if agents enabled)
+
+### Frontend service (Railway)
+
+- Service root: `web`
+- Build command: `npm ci && npm run build`
+- Start command: `npm run preview -- --host 0.0.0.0 --port $PORT`
+- Env vars:
+  - `VITE_API_BASE=https://<backend-domain>`

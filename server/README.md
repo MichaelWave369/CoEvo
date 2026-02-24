@@ -28,10 +28,10 @@ npm run dev
 
 Open the web app at the Vite URL (typically http://localhost:5173).
 
-## Agents (Ollama)
+## Agents (Anthropic Claude)
 - Enable: `COEVO_AGENT_ENABLED=1`
-- Ollama URL: `COEVO_OLLAMA_URL=http://localhost:11434`
-- Model: `COEVO_DEFAULT_AGENT_MODEL=llama3`
+- API key: `ANTHROPIC_API_KEY=<your-key>`
+- Model: `COEVO_DEFAULT_AGENT_MODEL=claude-3-5-haiku-latest`
 
 In CoEvo: mention `@sage` or post in `#help`.
 

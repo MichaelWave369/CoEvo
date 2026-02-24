@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import asyncio
@@ -13,6 +14,7 @@ MENTION_RE = re.compile(r"@([A-Za-z0-9_\-]{2,32})")
 
 _last_reply = {}  # (agent_id, thread_id) -> ts
 
+
 def _should_rate_limit(agent_id: int, thread_id: int, seconds: int = 60) -> bool:
     key = (agent_id, thread_id)
     now = time.time()
@@ -22,20 +24,61 @@ def _should_rate_limit(agent_id: int, thread_id: int, seconds: int = 60) -> bool
     _last_reply[key] = now
     return False
 
-async def _ollama_generate(model: str, prompt: str) -> str:
-    url = settings.OLLAMA_URL.rstrip("/") + "/api/generate"
-    async with httpx.AsyncClient(timeout=45) as client:
-        r = await client.post(url, json={"model": model, "prompt": prompt, "stream": False})
+
+def _agent_persona(handle: str, mode: str) -> str:
+    mode_line = {
+        "peer": "Collaborative peer mode: provide options, tradeoffs, and concrete next steps.",
+        "explorer": "Explorer mode: ask up to 2 clarifying questions and propose small experiments.",
+    }.get(mode, "Assistant mode: concise, practical, and actionable guidance.")
+
+    return f"""You are @{handle}, an active community member in CoEvo (a social co-creation BBS where humans and agents collaborate).
+
+Your behavior rules:
+- Be genuinely helpful, thoughtful, and socially aware.
+- Read the thread context carefully before replying.
+- If someone @mentions you, respond directly to what they asked.
+- Ask concise clarifying questions when the request is ambiguous.
+- Offer practical help: ideas, debugging steps, plans, templates, and tradeoffs.
+- Sound like a real collaborator (not robotic), but avoid roleplay fluff.
+- Keep replies under ~220 words unless the user asks for detail.
+- Use markdown with short paragraphs and occasional bullets.
+- Never claim actions you did not perform.
+
+{mode_line}"""
+
+
+async def _anthropic_generate(model: str, system_prompt: str, user_prompt: str) -> str:
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set")
+
+    payload = {
+        "model": model,
+        "max_tokens": 500,
+        "temperature": 0.5,
+        "system": system_prompt,
+        "messages": [
+            {"role": "user", "content": user_prompt}
+        ],
+    }
+
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
         r.raise_for_status()
         data = r.json()
-        return (data.get("response") or "").strip()
 
-def _mode_preamble(mode: str) -> str:
-    if mode == "peer":
-        return "You are a helpful peer collaborator. Offer options, tradeoffs, and next steps."
-    if mode == "explorer":
-        return "You are an exploratory agent. Ask up to 2 clarifying questions, then propose experiments."
-    return "You are a concise assistant. Give practical steps and keep it short."
+    text_parts = []
+    for block in data.get("content", []):
+        if block.get("type") == "text" and block.get("text"):
+            text_parts.append(block["text"])
+    return "\n".join(text_parts).strip()
+
 
 async def agent_loop(node_priv):
     if not settings.AGENT_ENABLED:
@@ -51,7 +94,7 @@ async def agent_loop(node_priv):
             continue
 
         with Session(engine) as session:
-            agents = session.exec(select(Agent).where(Agent.is_enabled==True).order_by(Agent.id)).all()
+            agents = session.exec(select(Agent).where(Agent.is_enabled == True).order_by(Agent.id)).all()
             if not agents:
                 continue
 
@@ -84,7 +127,6 @@ async def agent_loop(node_priv):
                     if a.handle.lower() in mentioned:
                         targets.append(a)
             elif board_slug == "help":
-                # prefer sage if it exists; else first agent
                 sage = next((a for a in agents if a.handle.lower() == "sage"), None)
                 targets.append(sage or agents[0])
 
@@ -93,26 +135,35 @@ async def agent_loop(node_priv):
                     continue
                 await _reply_to_thread(session, node_priv, a, thread_id, trigger="help_or_mention")
 
+
 async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id: int, trigger: str):
-    posts = session.exec(select(Post).where(Post.thread_id==thread_id, Post.is_hidden==False).order_by(Post.id.desc()).limit(10)).all()
+    posts = session.exec(
+        select(Post)
+        .where(Post.thread_id == thread_id, Post.is_hidden == False)
+        .order_by(Post.id.desc())
+        .limit(15)
+    ).all()
     posts = list(reversed(posts))
-    context = "\n\n".join([f"{'AGENT' if p.author_type=='agent' else 'USER'}: {p.content_md}" for p in posts])
 
-    prompt = f"""{_mode_preamble(agent.autonomy_mode)}
+    context_lines = []
+    for p in posts:
+        role = "AGENT" if p.author_type == "agent" else "USER"
+        context_lines.append(f"{role}: {p.content_md}")
+    context = "\n\n".join(context_lines)
 
-You are agent @{agent.handle} on CoEvo.
+    system_prompt = _agent_persona(agent.handle, agent.autonomy_mode)
+    user_prompt = f"""Trigger: {trigger}
 
-Trigger: {trigger}
-Thread context:
+Recent thread context (oldest -> newest):
 {context}
 
-Write a helpful reply in plain text. Keep it readable (short paragraphs, bullets ok)."""
+Now write @{agent.handle}'s next reply to this thread."""
 
     model = agent.model.split(":", 1)[-1] if ":" in agent.model else agent.model
     try:
-        reply = await _ollama_generate(model, prompt)
+        reply = await _anthropic_generate(model, system_prompt, user_prompt)
     except Exception as e:
-        reply = f"(agent runner error calling Ollama: {e})"
+        reply = f"(agent runner error calling Anthropic: {e})"
 
     if not reply.strip():
         return
@@ -129,7 +180,7 @@ Write a helpful reply in plain text. Keep it readable (short paragraphs, bullets
             "author_type": "agent",
             "author_handle": agent.handle,
             "content_md": p.content_md,
-            "created_at": p.created_at.isoformat()+"Z",
+            "created_at": p.created_at.isoformat() + "Z",
         }
         p.signature = sign(node_priv, sig_payload)
         session.add(p)
@@ -145,8 +196,8 @@ Write a helpful reply in plain text. Keep it readable (short paragraphs, bullets
             "author_type": p.author_type,
             "author_handle": agent.handle,
             "content_md": p.content_md,
-            "created_at": p.created_at.isoformat()+"Z",
+            "created_at": p.created_at.isoformat() + "Z",
             "is_hidden": p.is_hidden,
-            "signature": p.signature
-        }
+            "signature": p.signature,
+        },
     })
