@@ -187,6 +187,7 @@ async def agent_loop(node_priv):
                 await _reply_to_thread(session, node_priv, a, thread_id, trigger="mention_or_help")
 
 
+
 async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id: int, trigger: str):
     posts = session.exec(
         select(Post).where(Post.thread_id == thread_id, Post.is_hidden == False).order_by(Post.id.desc()).limit(18)
