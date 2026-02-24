@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from ..db import get_session
-from ..models import User, Wallet
+from ..models import User, Wallet, InviteCode, InviteRedemption
 from ..schemas import RegisterIn, LoginIn, TokenOut, UserOut
 from ..core.security import hash_password, verify_password, create_access_token
 from ..services.ledger import transfer
@@ -17,7 +17,14 @@ def register(payload: RegisterIn, session: Session = Depends(get_session)):
     if existing:
         raise HTTPException(400, "Handle already taken")
 
-    user = User(handle=payload.handle, email=payload.email, password_hash=hash_password(payload.password), role="user")
+    inviter_user_id = None
+    invite_code_row = None
+    if payload.invite_code:
+        invite_code_row = session.exec(select(InviteCode).where(InviteCode.code==payload.invite_code)).first()
+        if invite_code_row:
+            inviter_user_id = invite_code_row.inviter_user_id
+
+    user = User(handle=payload.handle, email=payload.email, password_hash=hash_password(payload.password), role="user", invited_by_user_id=inviter_user_id)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -28,7 +35,12 @@ def register(payload: RegisterIn, session: Session = Depends(get_session)):
     session.refresh(wallet)
 
     transfer(session, None, wallet.id, NEW_ACCOUNT_GRANT, "mint", ref_type="user", ref_id=user.id)
-    log_event(session, "user_registered", {"user_id": user.id, "handle": user.handle, "grant": NEW_ACCOUNT_GRANT})
+    if invite_code_row:
+        redemption = InviteRedemption(invite_code_id=invite_code_row.id, invitee_user_id=user.id, rewarded_on_first_post=False)
+        session.add(redemption)
+        session.commit()
+
+    log_event(session, "user_registered", {"user_id": user.id, "handle": user.handle, "grant": NEW_ACCOUNT_GRANT, "invited_by_user_id": inviter_user_id})
 
     return UserOut(id=user.id, handle=user.handle, role=user.role)
 
