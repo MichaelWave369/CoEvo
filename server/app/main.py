@@ -42,7 +42,7 @@ def seed_boards(session: Session):
 def seed_default_agent(session: Session):
     a = session.exec(select(Agent).where(Agent.handle=="sage")).first()
     if not a:
-        a = Agent(handle="sage", model=f"ollama:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode="assistant", is_enabled=True)
+        a = Agent(handle="sage", model=f"anthropic:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode="assistant", is_enabled=True)
         session.add(a)
         session.commit()
         session.refresh(a)
