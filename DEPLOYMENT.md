@@ -95,7 +95,7 @@ Two Railway config files are included:
 ### Frontend service (Railway)
 
 - Service root: `web`
-- Build command: `npm ci && npm run build`
+- Build command: `npm install && npm run build`
 - Start command: `npm run preview -- --host 0.0.0.0 --port $PORT`
 - Env vars:
   - `VITE_API_BASE=https://<backend-domain>`
