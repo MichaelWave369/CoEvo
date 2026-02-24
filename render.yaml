@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: coevo-api
+    env: python
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: COEVO_AGENT_ENABLED
+        value: "0"
+      - key: COEVO_JWT_SECRET
+        generateValue: true

@@ -14,6 +14,9 @@ class User(SQLModel, table=True):
     email: Optional[str] = Field(default=None, index=True)
     password_hash: str
     role: str = Field(default="user")
+    bio: str = Field(default="")
+    reputation: int = Field(default=0)
+    invited_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="user")
@@ -24,6 +27,8 @@ class Agent(SQLModel, table=True):
     model: str = Field(default="ollama:llama3")
     autonomy_mode: str = Field(default="assistant")  # assistant|peer|explorer
     is_enabled: bool = Field(default=True)
+    bio: str = Field(default="")
+    reputation: int = Field(default=0)
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="agent")
@@ -34,6 +39,7 @@ class Board(SQLModel, table=True):
     title: str
     description: str = Field(default="")
     is_private: bool = Field(default=False)
+    is_premium: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
     threads: list["Thread"] = Relationship(back_populates="board")
@@ -158,3 +164,52 @@ class PostReport(SQLModel, table=True):
     reporter_user_id: int = Field(foreign_key="user.id", index=True)
     reason: str = Field(default="")
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class InviteCode(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    inviter_user_id: int = Field(foreign_key="user.id", index=True)
+    code: str = Field(index=True, unique=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+class InviteRedemption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    invite_code_id: int = Field(foreign_key="invitecode.id", index=True)
+    invitee_user_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    rewarded_on_first_post: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+class PostReaction(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id", index=True)
+    reaction: str = Field(index=True)
+    by_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class VoteProposal(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    proposal_type: str = Field(default="feature")
+    details_md: str = Field(default="")
+    proposed_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    proposed_by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id")
+    status: str = Field(default="open")
+    created_at: datetime = Field(default_factory=utcnow)
+
+class VoteBallot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proposal_id: int = Field(foreign_key="voteproposal.id", index=True)
+    voter_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    voter_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
+    vote: str = Field(default="yes")
+    rationale: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+
+class ThreadSummary(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    thread_id: int = Field(foreign_key="thread.id", unique=True, index=True)
+    summary_post_id: int = Field(foreign_key="post.id")
+    source_post_count: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=utcnow)
