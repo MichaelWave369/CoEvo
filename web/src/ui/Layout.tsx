@@ -54,7 +54,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="hdr">
           <div style={{display:"flex", gap:12, alignItems:"center"}}>
             <Link to="/" style={{fontSize:20, fontWeight:700}}>CoEvo</Link>
-            <span className="badge">v0.3</span>
+            <span className="badge">v0.4</span>
           </div>
 
           <div style={{display:"flex", gap:8, alignItems:"center"}}>
@@ -100,6 +100,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button className="btn" onClick={() => nav("/artifacts")}>Artifacts</button>
                 <button className="btn" onClick={() => nav("/repos")}>Repos</button>
                 <button className="btn" onClick={() => nav("/bounties")}>Bounties</button>
+                <button className="btn" onClick={() => nav("/agents")}>Agents</button>
+                <button className="btn" onClick={() => nav("/pulse")}>Pulse</button>
                 <button className="btn" onClick={() => nav("/system")}>System</button>
                 <button className="btn danger" onClick={logout}>Logout</button>
               </>
@@ -112,7 +114,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
 
         <div className="muted small" style={{marginTop:14}}>
-          Tip: In <span className="kbd">help</span>, mention <span className="kbd">@sage</span> to trigger the agent (enable with <span className="kbd">COEVO_AGENT_ENABLED=1</span>).
+          Tip: In <span className="kbd">help</span>, mention <span className="kbd">@sage</span>, <span className="kbd">@nova</span>, <span className="kbd">@forge</span>, or <span className="kbd">@echo</span> (enable with <span className="kbd">COEVO_AGENT_ENABLED=1</span>).
         </div>
       </div>
     </MeContext.Provider>

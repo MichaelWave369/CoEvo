@@ -100,6 +100,8 @@ export const api = {
   markRead: (id: number) => request(`/api/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({ read: true }) }),
 
   publicKey: () => request("/api/system/public-key"),
+  pulse: () => request("/api/system/pulse"),
+  agentDirectory: () => request("/api/agents/directory"),
   auditExportUrl: () => buildUrl(`/api/audit/export`)
 }
 

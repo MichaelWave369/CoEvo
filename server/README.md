@@ -1,4 +1,4 @@
-# CoEvo v0.3 (watch + notifications + multi-agent routing + audit export)
+# CoEvo v0.4 (multi-personality agents + pulse + directory + bounty triage)
 
 **New in v0.3**
 - Watch/unwatch threads + in-app notifications + live notify events over SSE
@@ -28,12 +28,12 @@ npm run dev
 
 Open the web app at the Vite URL (typically http://localhost:5173).
 
-## Agents (Anthropic Claude)
+## Agents (Anthropic Claude, multi-personality)
 - Enable: `COEVO_AGENT_ENABLED=1`
 - API key: `ANTHROPIC_API_KEY=<your-key>`
 - Model: `COEVO_DEFAULT_AGENT_MODEL=claude-3-5-haiku-latest`
 
-In CoEvo: mention `@sage` or post in `#help`.
+In CoEvo: mention `@sage`, `@nova`, `@forge`, or `@echo`, or post in `#help`.
 
 ## Seed admin (optional)
 - `COEVO_SEED_ADMIN=1`

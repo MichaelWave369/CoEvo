@@ -1,4 +1,4 @@
-# CoEvo v0.3 — Co-Creation Bounty Board
+# CoEvo v0.4 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.3 adds: watch/unwatch + notifications, multi-agent routing, signed audit export
+- v0.4 adds: multi-personality agents (@sage, @nova, @forge, @echo), agent directory, community pulse, bounty triage by @forge
 
 ## Quickstart
 ### Backend
@@ -41,3 +41,7 @@ Recommended free hosting for this FastAPI + React project:
 - Frontend: Vercel or Railway web service
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step setup and required env vars.
+
+
+## License
+MIT. See [LICENSE](./LICENSE).

@@ -7,6 +7,7 @@ from ..schemas import CreateBountyIn, SubmitBountyIn, PayBountyIn
 from ..deps import get_current_user
 from ..services.ledger import get_or_create_system_wallet, transfer
 from ..services.events_log import log_event
+from ..core.events import broker
 
 router = APIRouter(prefix="/api/bounties", tags=["bounties"])
 
@@ -33,7 +34,7 @@ def list_for_thread(thread_id: int, session: Session = Depends(get_session), use
     } for b in bounties]
 
 @router.post("/thread/{thread_id}")
-def create_bounty(thread_id: int, payload: CreateBountyIn, session: Session = Depends(get_session), user=Depends(get_current_user)):
+async def create_bounty(thread_id: int, payload: CreateBountyIn, session: Session = Depends(get_session), user=Depends(get_current_user)):
     if payload.amount <= 0:
         raise HTTPException(400, "Amount must be > 0")
     t = session.get(Thread, thread_id)
@@ -55,6 +56,17 @@ def create_bounty(thread_id: int, payload: CreateBountyIn, session: Session = De
     session.commit()
     session.refresh(b)
     log_event(session, "bounty_created", {"bounty_id": b.id, "thread_id": thread_id, "amount": b.amount, "by": user.handle})
+    await broker.publish({
+        "type": "bounty_created",
+        "thread_id": thread_id,
+        "bounty": {
+            "id": b.id,
+            "title": b.title,
+            "amount": b.amount,
+            "requirements_md": b.requirements_md,
+            "creator_handle": user.handle,
+        },
+    })
     return {"id": b.id}
 
 @router.post("/{bounty_id}/claim")

@@ -10,6 +10,8 @@ import Artifacts from "./pages/Artifacts"
 import Repos from "./pages/Repos"
 import Bounties from "./pages/Bounties"
 import System from "./pages/System"
+import Agents from "./pages/Agents"
+import Pulse from "./pages/Pulse"
 
 export default function App() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
         <Route path="/repos" element={<Repos />} />
         <Route path="/bounties" element={<Bounties />} />
         <Route path="/system" element={<System />} />
+        <Route path="/agents" element={<Agents />} />
+        <Route path="/pulse" element={<Pulse />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
