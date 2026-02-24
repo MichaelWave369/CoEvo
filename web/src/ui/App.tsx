@@ -1,6 +1,7 @@
 import React from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import Layout from "./Layout"
+import ErrorBoundary from "./ErrorBoundary"
 import Login from "./pages/Login"
 import Boards from "./pages/Boards"
 import Landing from "./pages/Landing"
@@ -20,6 +21,7 @@ import Pulse from "./pages/Pulse"
 export default function App() {
   return (
     <Layout>
+      <ErrorBoundary>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/boards" element={<Boards />} />
@@ -38,6 +40,7 @@ export default function App() {
         <Route path="/votes" element={<Votes />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ErrorBoundary>
     </Layout>
   )
 }
