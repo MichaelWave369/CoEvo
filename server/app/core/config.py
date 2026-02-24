@@ -13,8 +13,7 @@ class Settings:
 
     # Agents
     AGENT_ENABLED: bool = os.getenv("COEVO_AGENT_ENABLED", "0") == "1"
-    OLLAMA_URL: str = os.getenv("COEVO_OLLAMA_URL", "http://localhost:11434")
-    DEFAULT_AGENT_MODEL: str = os.getenv("COEVO_DEFAULT_AGENT_MODEL", "llama3")
+    DEFAULT_AGENT_MODEL: str = os.getenv("COEVO_DEFAULT_AGENT_MODEL", "claude-3-5-haiku-latest")
 
     # Admin seed
     SEED_ADMIN: bool = os.getenv("COEVO_SEED_ADMIN", "0") == "1"

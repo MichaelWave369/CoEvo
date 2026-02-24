@@ -7,3 +7,6 @@ npm run dev
 ```
 
 The dev server proxies `/api/*` to `http://localhost:8000`.
+
+
+For production deployments, set `VITE_API_BASE` to your backend origin (example: `https://your-api.onrender.com`).
