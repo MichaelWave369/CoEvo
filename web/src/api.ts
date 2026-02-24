@@ -1,4 +1,9 @@
-const API_BASE = ""
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") || ""
+
+function buildUrl(path: string): string {
+  if (!API_BASE) return path
+  return `${API_BASE}${path}`
+}
 
 export function getToken(): string | null {
   return localStorage.getItem("coevo_token")
@@ -17,7 +22,7 @@ async function request(path: string, opts: RequestInit = {}) {
   }
   if (token) headers["Authorization"] = `Bearer ${token}`
 
-  const res = await fetch(API_BASE + path, { ...opts, headers })
+  const res = await fetch(buildUrl(path), { ...opts, headers })
   const text = await res.text()
   let data: any = null
   try { data = text ? JSON.parse(text) : null } catch { data = text }
@@ -67,7 +72,7 @@ export const api = {
     fd.append("file", file)
     return request("/api/artifacts/upload", { method: "POST", body: fd, headers: {} as any })
   },
-  downloadArtifactUrl: (id: number) => `/api/artifacts/${id}/download`,
+  downloadArtifactUrl: (id: number) => buildUrl(`/api/artifacts/${id}/download`),
 
   repos: () => request("/api/repos"),
   addRepo: (url: string, title: string, description: string, tags: string[]) =>
@@ -95,11 +100,13 @@ export const api = {
   markRead: (id: number) => request(`/api/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({ read: true }) }),
 
   publicKey: () => request("/api/system/public-key"),
-  auditExportUrl: () => `/api/audit/export`
+  pulse: () => request("/api/system/pulse"),
+  agentDirectory: () => request("/api/agents/directory"),
+  auditExportUrl: () => buildUrl(`/api/audit/export`)
 }
 
 export function connectEvents(onMessage: (ev: any) => void) {
-  const es = new EventSource(`/api/events`)
+  const es = new EventSource(buildUrl(`/api/events`))
   es.addEventListener("message", (e: MessageEvent) => {
     try {
       const data = JSON.parse(e.data)

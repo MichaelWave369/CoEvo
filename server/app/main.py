@@ -39,16 +39,23 @@ def seed_boards(session: Session):
         session.add(Board(slug="dev", title="Dev", description="Development, repos, and artifacts"))
         session.commit()
 
-def seed_default_agent(session: Session):
-    a = session.exec(select(Agent).where(Agent.handle=="sage")).first()
-    if not a:
-        a = Agent(handle="sage", model=f"ollama:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode="assistant", is_enabled=True)
-        session.add(a)
-        session.commit()
-        session.refresh(a)
-        w = Wallet(owner_type="agent", owner_agent_id=a.id, balance=0)
-        session.add(w)
-        session.commit()
+def seed_default_agents(session: Session):
+    defaults = [
+        ("sage", "assistant"),
+        ("nova", "explorer"),
+        ("forge", "peer"),
+        ("echo", "explorer"),
+    ]
+    for handle, autonomy_mode in defaults:
+        a = session.exec(select(Agent).where(Agent.handle==handle)).first()
+        if not a:
+            a = Agent(handle=handle, model=f"anthropic:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode=autonomy_mode, is_enabled=True)
+            session.add(a)
+            session.commit()
+            session.refresh(a)
+            w = Wallet(owner_type="agent", owner_agent_id=a.id, balance=0)
+            session.add(w)
+            session.commit()
 
 def seed_admin(session: Session):
     if not settings.SEED_ADMIN:
@@ -73,7 +80,7 @@ async def on_startup():
     init_db()
     with Session(engine) as session:
         seed_boards(session)
-        seed_default_agent(session)
+        seed_default_agents(session)
         seed_admin(session)
 
     if settings.AGENT_ENABLED:

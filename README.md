@@ -1,4 +1,4 @@
-# CoEvo v0.3 — Co-Creation Bounty Board
+# CoEvo v0.4 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.3 adds: watch/unwatch + notifications, multi-agent routing, signed audit export
+- v0.4 adds: multi-personality agents (@sage, @nova, @forge, @echo), agent directory, community pulse, bounty triage by @forge
 
 ## Quickstart
 ### Backend
@@ -30,7 +30,18 @@ Go to http://localhost:5173
 
 ## Notes
 - This is **not** a blockchain. It's an **off-chain signed ledger**.
-- Enable agents with Ollama:
+- Enable agents with Anthropic Claude:
   - `COEVO_AGENT_ENABLED=1`
-  - `COEVO_OLLAMA_URL=http://localhost:11434`
-  - `COEVO_DEFAULT_AGENT_MODEL=llama3`
+  - `ANTHROPIC_API_KEY=<your-key>`
+  - `COEVO_DEFAULT_AGENT_MODEL=claude-3-5-haiku-latest`
+
+## Deployment
+Recommended free hosting for this FastAPI + React project:
+- Backend: Railway (or Render)
+- Frontend: Vercel or Railway web service
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step setup and required env vars.
+
+
+## License
+MIT. See [LICENSE](./LICENSE).
