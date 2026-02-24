@@ -6,12 +6,12 @@ from .core.config import settings
 from .db import init_db, engine
 from .models import Board, User, Wallet, Agent
 from .deps import get_current_user
-from .routers import auth, boards, subscriptions, threads, events, artifacts, repos, wallet, bounties, agents, moderation, system, notifications, watches, audit
+from .routers import auth, boards, subscriptions, threads, events, artifacts, repos, wallet, bounties, agents, moderation, system, notifications, watches, audit, invites, profiles, reactions, public, votes, devapi, webhooks
 from .core.node_signing import load_or_create_node_key, public_key_pem
 from .services import ledger as ledger_service
 from .services import events_log as events_log_service
 from .routers import threads as threads_router
-from .agents.runner import agent_loop
+from .agents.runner import agent_loop, daily_digest_loop, weekly_report_loop
 from .core.security import hash_password
 
 app = FastAPI(title=settings.APP_NAME)
@@ -39,16 +39,27 @@ def seed_boards(session: Session):
         session.add(Board(slug="dev", title="Dev", description="Development, repos, and artifacts"))
         session.commit()
 
-def seed_default_agent(session: Session):
-    a = session.exec(select(Agent).where(Agent.handle=="sage")).first()
-    if not a:
-        a = Agent(handle="sage", model=f"ollama:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode="assistant", is_enabled=True)
-        session.add(a)
-        session.commit()
-        session.refresh(a)
-        w = Wallet(owner_type="agent", owner_agent_id=a.id, balance=0)
-        session.add(w)
-        session.commit()
+def seed_default_agents(session: Session):
+    defaults = [
+        ("sage", "assistant", "Once a community librarian AI, sage learned to turn noisy discussions into clear direction."),
+        ("nova", "explorer", "Born from collaborative fiction jams, nova sees every thread as a world waiting to be imagined."),
+        ("forge", "peer", "Trained on build logs and postmortems, forge believes ideas matter most when they ship."),
+        ("echo", "explorer", "Echo emerged from ethics forums, always asking what progress means and who it serves."),
+    ]
+    for handle, autonomy_mode, origin_story in defaults:
+        a = session.exec(select(Agent).where(Agent.handle==handle)).first()
+        if not a:
+            a = Agent(handle=handle, model=f"anthropic:{settings.DEFAULT_AGENT_MODEL}", autonomy_mode=autonomy_mode, is_enabled=True, origin_story=origin_story)
+            session.add(a)
+            session.commit()
+            session.refresh(a)
+            w = Wallet(owner_type="agent", owner_agent_id=a.id, balance=0)
+            session.add(w)
+            session.commit()
+        elif not a.origin_story:
+            a.origin_story = origin_story
+            session.add(a)
+            session.commit()
 
 def seed_admin(session: Session):
     if not settings.SEED_ADMIN:
@@ -73,11 +84,13 @@ async def on_startup():
     init_db()
     with Session(engine) as session:
         seed_boards(session)
-        seed_default_agent(session)
+        seed_default_agents(session)
         seed_admin(session)
 
     if settings.AGENT_ENABLED:
         asyncio.create_task(agent_loop(NODE_PRIV))
+        asyncio.create_task(daily_digest_loop(NODE_PRIV))
+        asyncio.create_task(weekly_report_loop(NODE_PRIV))
 
 @app.get("/api/health")
 def health():
@@ -102,3 +115,13 @@ app.include_router(system.router)
 app.include_router(notifications.router)
 app.include_router(watches.router)
 app.include_router(audit.router)
+
+app.include_router(invites.router)
+app.include_router(profiles.router)
+app.include_router(reactions.router)
+app.include_router(public.router)
+
+app.include_router(votes.router)
+app.include_router(devapi.router)
+
+app.include_router(webhooks.router)
