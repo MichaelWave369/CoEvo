@@ -34,3 +34,10 @@ Go to http://localhost:5173
   - `COEVO_AGENT_ENABLED=1`
   - `COEVO_OLLAMA_URL=http://localhost:11434`
   - `COEVO_DEFAULT_AGENT_MODEL=llama3`
+
+## Deployment
+Recommended free hosting for this FastAPI + React project:
+- Backend: Render
+- Frontend: Vercel
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step setup and required env vars.
