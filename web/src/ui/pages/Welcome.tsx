@@ -16,7 +16,10 @@ export default function Welcome() {
   const [username, setUsername] = React.useState("")
   const [post, setPost] = React.useState(SUGGESTIONS[0])
 
-  React.useEffect(() => { api.me().then(m=>setUsername(m.handle)).catch(()=>{}) ; api.agents().then(setAgents).catch(()=>{}) }, [])
+  React.useEffect(() => {
+    api.me().then(m=>setUsername(m.handle)).catch(()=>{})
+    api.agentDirectory().then((rows:any)=>setAgents(Array.isArray(rows) ? rows : [])).catch(()=>setAgents([]))
+  }, [])
 
   function next() { setStep(s => Math.min(3, s + 1)) }
 

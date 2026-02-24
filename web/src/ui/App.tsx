@@ -1,5 +1,5 @@
 import React from "react"
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation } from "react-router-dom"
 import Layout from "./Layout"
 import ErrorBoundary from "./ErrorBoundary"
 import Login from "./pages/Login"
@@ -19,9 +19,11 @@ import Agents from "./pages/Agents"
 import Pulse from "./pages/Pulse"
 
 export default function App() {
+  const location = useLocation()
+
   return (
     <Layout>
-      <ErrorBoundary>
+      <ErrorBoundary key={location.pathname}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/boards" element={<Boards />} />

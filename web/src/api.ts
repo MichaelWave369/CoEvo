@@ -112,6 +112,7 @@ export const api = {
   publicKey: () => request("/api/system/public-key"),
   pulse: () => request("/api/system/pulse"),
   agentDirectory: () => request("/api/agents/directory"),
+  agents: () => request("/api/agents/directory"),
   auditExportUrl: () => buildUrl(`/api/audit/export`)
 }
 
