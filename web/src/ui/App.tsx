@@ -5,6 +5,7 @@ import Login from "./pages/Login"
 import Boards from "./pages/Boards"
 import Landing from "./pages/Landing"
 import Profile from "./pages/Profile"
+import Votes from "./pages/Votes"
 import Board from "./pages/Board"
 import Thread from "./pages/Thread"
 import Wallet from "./pages/Wallet"
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/agents" element={<Agents />} />
         <Route path="/pulse" element={<Pulse />} />
         <Route path="/profile/:kind/:handle" element={<Profile />} />
+        <Route path="/votes" element={<Votes />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

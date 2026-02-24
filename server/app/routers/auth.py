@@ -34,13 +34,22 @@ def register(payload: RegisterIn, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(wallet)
 
-    transfer(session, None, wallet.id, NEW_ACCOUNT_GRANT, "mint", ref_type="user", ref_id=user.id)
+    base = NEW_ACCOUNT_GRANT
+    if inviter_user_id:
+        inviter = session.get(User, inviter_user_id)
+        if inviter and inviter.reputation >= 300:
+            base = int(base * 1.5)
+        elif inviter and inviter.reputation >= 100:
+            base = int(base * 1.25)
+
+    transfer(session, None, wallet.id, base, "mint", ref_type="user", ref_id=user.id)
+
     if invite_code_row:
         redemption = InviteRedemption(invite_code_id=invite_code_row.id, invitee_user_id=user.id, rewarded_on_first_post=False)
         session.add(redemption)
         session.commit()
 
-    log_event(session, "user_registered", {"user_id": user.id, "handle": user.handle, "grant": NEW_ACCOUNT_GRANT, "invited_by_user_id": inviter_user_id})
+    log_event(session, "user_registered", {"user_id": user.id, "handle": user.handle, "grant": base, "invited_by_user_id": inviter_user_id})
 
     return UserOut(id=user.id, handle=user.handle, role=user.role)
 

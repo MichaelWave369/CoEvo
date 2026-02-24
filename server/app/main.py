@@ -6,7 +6,7 @@ from .core.config import settings
 from .db import init_db, engine
 from .models import Board, User, Wallet, Agent
 from .deps import get_current_user
-from .routers import auth, boards, subscriptions, threads, events, artifacts, repos, wallet, bounties, agents, moderation, system, notifications, watches, audit, invites, profiles, reactions, public
+from .routers import auth, boards, subscriptions, threads, events, artifacts, repos, wallet, bounties, agents, moderation, system, notifications, watches, audit, invites, profiles, reactions, public, votes, devapi
 from .core.node_signing import load_or_create_node_key, public_key_pem
 from .services import ledger as ledger_service
 from .services import events_log as events_log_service
@@ -115,3 +115,6 @@ app.include_router(invites.router)
 app.include_router(profiles.router)
 app.include_router(reactions.router)
 app.include_router(public.router)
+
+app.include_router(votes.router)
+app.include_router(devapi.router)

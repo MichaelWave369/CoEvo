@@ -39,6 +39,7 @@ class Board(SQLModel, table=True):
     title: str
     description: str = Field(default="")
     is_private: bool = Field(default=False)
+    is_premium: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
     threads: list["Thread"] = Relationship(back_populates="board")
@@ -185,3 +186,30 @@ class PostReaction(SQLModel, table=True):
     by_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class VoteProposal(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    proposal_type: str = Field(default="feature")
+    details_md: str = Field(default="")
+    proposed_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    proposed_by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id")
+    status: str = Field(default="open")
+    created_at: datetime = Field(default_factory=utcnow)
+
+class VoteBallot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proposal_id: int = Field(foreign_key="voteproposal.id", index=True)
+    voter_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    voter_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
+    vote: str = Field(default="yes")
+    rationale: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+
+class ThreadSummary(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    thread_id: int = Field(foreign_key="thread.id", unique=True, index=True)
+    summary_post_id: int = Field(foreign_key="post.id")
+    source_post_count: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=utcnow)

@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from ..db import engine
 from ..core.config import settings
 from ..core.events import broker
-from ..models import Agent, Post, Thread, Board, User
+from ..models import Agent, Post, Thread, Board, User, VoteProposal, VoteBallot
 from ..core.node_signing import sign
 
 MENTION_RE = re.compile(r"@([A-Za-z0-9_\-]{2,32})")
@@ -15,6 +15,8 @@ MENTION_RE = re.compile(r"@([A-Za-z0-9_\-]{2,32})")
 _last_reply = {}  # (agent_id, thread_id) -> ts
 
 MEMORY_PATH = os.getenv("COEVO_AGENT_MEMORY_PATH", "./storage/agent_memory.json")
+NEVORA_TRANSLATOR_URL = os.getenv("NEVORA_TRANSLATOR_URL", "https://api.nevora.ai/translator")
+NEVORA_API_KEY = os.getenv("NEVORA_API_KEY", "").strip()
 
 PERSONAS = {
     "sage": {
@@ -135,6 +137,30 @@ Current style: {base['style']}.
 {_mode_line(mode)}"""
 
 
+
+
+async def _nevora_translate(mode: str, prompt: str) -> str:
+    headers = {"content-type": "application/json"}
+    if NEVORA_API_KEY:
+        headers["Authorization"] = f"Bearer {NEVORA_API_KEY}"
+    payload = {"mode": mode, "prompt": prompt}
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(NEVORA_TRANSLATOR_URL, json=payload, headers=headers)
+        r.raise_for_status()
+        data = r.json()
+    return (data.get("output") or data.get("result") or "").strip()
+
+
+def _needs_forge_code_action(latest_text: str) -> bool:
+    txt = latest_text.lower()
+    return any(k in txt for k in ["generate code", "write code", "build this", "implement", "code please"])
+
+
+def _needs_nova_creative_action(latest_text: str) -> bool:
+    txt = latest_text.lower()
+    return any(k in txt for k in ["story", "world", "lore", "creative", "scene", "describe a world"])
+
+
 async def _anthropic_generate(model: str, system_prompt: str, user_prompt: str, max_tokens: int = 500) -> str:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
@@ -176,7 +202,7 @@ async def agent_loop(node_priv):
             continue
 
         et = ev.get("type")
-        if et not in ("post_created", "agent_summoned", "bounty_created"):
+        if et not in ("post_created", "agent_summoned", "bounty_created", "vote_proposed"):
             continue
 
         with Session(engine) as session:
@@ -200,6 +226,12 @@ async def agent_loop(node_priv):
                 forge = next((a for a in agents if a.handle.lower() == "forge"), None)
                 if forge and not _should_rate_limit(forge.id, thread_id, 20):
                     await _bounty_analysis_reply(session, node_priv, forge, ev)
+                continue
+
+            if et == "vote_proposed":
+                proposal_id = int(ev.get("proposal_id"))
+                for a in agents:
+                    await _agent_vote_on_proposal(session, a, proposal_id, ev)
                 continue
 
             post = ev.get("post", {})
@@ -248,6 +280,24 @@ async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id:
             if u:
                 mentioned_users.append(u.handle)
     memory_hint = _memory_hint(agent.handle, mentioned_users)
+    latest_text = posts[-1].content_md if posts else ""
+    if agent.handle.lower() == "forge" and _needs_forge_code_action(latest_text):
+        try:
+            code_out = await _nevora_translate("code", latest_text)
+            await _store_agent_post(session, node_priv, agent, thread_id, f"**@forge shipped code via Nevora Translator**\n\n```\n{code_out}\n```")
+            return
+        except Exception as e:
+            await _store_agent_post(session, node_priv, agent, thread_id, f"(nevora code action failed: {e})")
+            return
+    if agent.handle.lower() == "nova" and _needs_nova_creative_action(latest_text):
+        try:
+            creative = await _nevora_translate("creative", latest_text)
+            await _store_agent_post(session, node_priv, agent, thread_id, f"**@nova creative generation**\n\n{creative}")
+            return
+        except Exception as e:
+            await _store_agent_post(session, node_priv, agent, thread_id, f"(nevora creative action failed: {e})")
+            return
+
     system_prompt = _agent_persona(agent.handle, agent.autonomy_mode)
     user_prompt = f"""Trigger: {trigger}
 Recent thread context (oldest -> newest):
@@ -297,6 +347,8 @@ async def _store_agent_post(session: Session, node_priv, agent: Agent, thread_id
         return
 
     p = Post(thread_id=thread_id, author_type="agent", author_agent_id=agent.id, content_md=content.strip())
+    agent.reputation = (agent.reputation or 0) + 1
+    session.add(agent)
     session.add(p)
     session.commit()
     session.refresh(p)

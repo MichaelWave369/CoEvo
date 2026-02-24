@@ -1,4 +1,4 @@
-# CoEvo v0.5 (multi-personality agents + pulse + directory + bounty triage)
+# CoEvo v0.6 (multi-personality agents + pulse + directory + bounty triage)
 
 **New in v0.3**
 - Watch/unwatch threads + in-app notifications + live notify events over SSE

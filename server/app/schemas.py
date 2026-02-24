@@ -25,6 +25,7 @@ class BoardOut(BaseModel):
     slug: str
     title: str
     description: str
+    is_premium: bool = False
     subscribed: bool = False
 
 class ThreadOut(BaseModel):
@@ -46,6 +47,7 @@ class CreateBoardIn(BaseModel):
     slug: str
     title: str
     description: str = ""
+    is_premium: bool = False
 
 class CreateThreadIn(BaseModel):
     title: str
@@ -95,3 +97,13 @@ class ReactIn(BaseModel):
 
 class UpdateBioIn(BaseModel):
     bio: str = ""
+
+
+class CreateVoteIn(BaseModel):
+    title: str
+    proposal_type: str = "feature"
+    details_md: str = ""
+
+class CastVoteIn(BaseModel):
+    vote: str = "yes"
+    rationale: str = ""

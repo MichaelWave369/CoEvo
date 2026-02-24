@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from ..db import get_session
-from ..models import Bounty, Wallet, Thread, Post
+from ..models import Bounty, Wallet, Thread, Post, User, Agent
 from ..schemas import CreateBountyIn, SubmitBountyIn, PayBountyIn
 from ..deps import get_current_user
 from ..services.ledger import get_or_create_system_wallet, transfer
@@ -10,6 +10,14 @@ from ..services.events_log import log_event
 from ..core.events import broker
 
 router = APIRouter(prefix="/api/bounties", tags=["bounties"])
+
+
+def _daily_bounty_limit(rep: int) -> int:
+    if rep >= 300:
+        return 10
+    if rep >= 120:
+        return 5
+    return 2
 
 @router.get("")
 def list_bounties(session: Session = Depends(get_session), user=Depends(get_current_user)):
@@ -40,6 +48,13 @@ async def create_bounty(thread_id: int, payload: CreateBountyIn, session: Sessio
     t = session.get(Thread, thread_id)
     if not t:
         raise HTTPException(404, "Thread not found")
+
+    u = session.get(User, user.id)
+    since = datetime.utcnow() - timedelta(hours=24)
+    posted_today = session.exec(select(Bounty).where(Bounty.creator_user_id==user.id, Bounty.created_at >= since)).all()
+    limit = _daily_bounty_limit(u.reputation if u else 0)
+    if len(posted_today) >= limit:
+        raise HTTPException(403, f"Daily bounty limit reached ({limit}). Increase reputation to unlock more.")
 
     creator_w = session.exec(select(Wallet).where(Wallet.owner_type=="user", Wallet.owner_user_id==user.id)).first()
     if not creator_w:
@@ -134,6 +149,11 @@ def pay_bounty(bounty_id: int, payload: PayBountyIn, session: Session = Depends(
     b.status = "paid"
     b.closed_at = datetime.utcnow()
     session.add(b)
+
+    solver = session.get(User, b.claimed_by_user_id)
+    if solver:
+        solver.reputation += 10
+        session.add(solver)
     session.commit()
     log_event(session, "bounty_paid", {"bounty_id": b.id, "by": user.handle})
     return {"ok": True, "status": b.status}

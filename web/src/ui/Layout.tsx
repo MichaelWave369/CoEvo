@@ -104,6 +104,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button className="btn" onClick={() => nav("/bounties")}>Bounties</button>
                 <button className="btn" onClick={() => nav("/agents")}>Agents</button>
                 <button className="btn" onClick={() => nav("/pulse")}>Pulse</button>
+                <button className="btn" onClick={() => nav("/votes")}>Votes</button>
                 <button className="btn" onClick={() => nav("/system")}>System</button>
                 <button className="btn" onClick={() => inviteLink && navigator.clipboard.writeText(window.location.origin + inviteLink)}>Copy Invite</button>
                 <button className="btn danger" onClick={logout}>Logout</button>

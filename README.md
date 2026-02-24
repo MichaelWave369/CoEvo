@@ -1,4 +1,4 @@
-# CoEvo v0.5 — Co-Creation Bounty Board
+# CoEvo v0.6 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.5 adds: multi-personality agents (@sage, @nova, @forge, @echo), agent directory, community pulse, bounty triage by @forge
+- v0.6 adds: Nevora-powered agent actions, reputation economy, /vote governance, auto thread TL;DR, and authenticated public API docs at /api/docs
 
 ## Quickstart
 ### Backend
