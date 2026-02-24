@@ -1,4 +1,9 @@
-const API_BASE = ""
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") || ""
+
+function buildUrl(path: string): string {
+  if (!API_BASE) return path
+  return `${API_BASE}${path}`
+}
 
 export function getToken(): string | null {
   return localStorage.getItem("coevo_token")
@@ -17,7 +22,7 @@ async function request(path: string, opts: RequestInit = {}) {
   }
   if (token) headers["Authorization"] = `Bearer ${token}`
 
-  const res = await fetch(API_BASE + path, { ...opts, headers })
+  const res = await fetch(buildUrl(path), { ...opts, headers })
   const text = await res.text()
   let data: any = null
   try { data = text ? JSON.parse(text) : null } catch { data = text }
@@ -31,8 +36,8 @@ async function request(path: string, opts: RequestInit = {}) {
 export const api = {
   health: () => request("/api/health"),
 
-  register: (handle: string, password: string, email?: string) =>
-    request("/api/auth/register", { method: "POST", body: JSON.stringify({ handle, password, email }) }),
+  register: (handle: string, password: string, email?: string, invite_code?: string) =>
+    request("/api/auth/register", { method: "POST", body: JSON.stringify({ handle, password, email, invite_code }) }),
 
   login: async (handle: string, password: string) => {
     const out = await request("/api/auth/login", { method: "POST", body: JSON.stringify({ handle, password }) })
@@ -67,7 +72,7 @@ export const api = {
     fd.append("file", file)
     return request("/api/artifacts/upload", { method: "POST", body: fd, headers: {} as any })
   },
-  downloadArtifactUrl: (id: number) => `/api/artifacts/${id}/download`,
+  downloadArtifactUrl: (id: number) => buildUrl(`/api/artifacts/${id}/download`),
 
   repos: () => request("/api/repos"),
   addRepo: (url: string, title: string, description: string, tags: string[]) =>
@@ -94,12 +99,24 @@ export const api = {
   unreadCount: () => request(`/api/notifications/unread-count`),
   markRead: (id: number) => request(`/api/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({ read: true }) }),
 
+
+  landing: () => request("/api/public/landing"),
+  myInvite: () => request("/api/invites/me"),
+  userProfile: (handle: string) => request(`/api/profiles/user/${handle}`),
+  agentProfile: (handle: string) => request(`/api/profiles/agent/${handle}`),
+  reactToPost: (postId: number, reaction: string) => request(`/api/reactions/post/${postId}`, { method: "POST", body: JSON.stringify({ reaction }) }),
+  reactionsForPost: (postId: number) => request(`/api/reactions/post/${postId}`),
+  votes: () => request("/api/votes"),
+  createVote: (title: string, proposal_type: string, details_md: string) => request("/api/votes", { method: "POST", body: JSON.stringify({ title, proposal_type, details_md }) }),
+  castVote: (proposalId: number, vote: string, rationale: string) => request(`/api/votes/${proposalId}/cast`, { method: "POST", body: JSON.stringify({ vote, rationale }) }),
   publicKey: () => request("/api/system/public-key"),
-  auditExportUrl: () => `/api/audit/export`
+  pulse: () => request("/api/system/pulse"),
+  agentDirectory: () => request("/api/agents/directory"),
+  auditExportUrl: () => buildUrl(`/api/audit/export`)
 }
 
 export function connectEvents(onMessage: (ev: any) => void) {
-  const es = new EventSource(`/api/events`)
+  const es = new EventSource(buildUrl(`/api/events`))
   es.addEventListener("message", (e: MessageEvent) => {
     try {
       const data = JSON.parse(e.data)
@@ -108,4 +125,15 @@ export function connectEvents(onMessage: (ev: any) => void) {
   })
   es.onerror = () => {}
   return () => es.close()
+}
+
+
+export function connectRealtime(onMessage: (ev: any) => void) {
+  const wsBase = API_BASE ? API_BASE.replace(/^http/, "ws") : ""
+  const ws = new WebSocket((wsBase || `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`) + `/api/ws`)
+  ws.onmessage = (e) => {
+    try { onMessage(JSON.parse(e.data)) } catch {}
+  }
+  ws.onerror = () => {}
+  return () => ws.close()
 }
