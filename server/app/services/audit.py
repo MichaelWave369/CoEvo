@@ -3,17 +3,23 @@ import io
 import json
 import zipfile
 from datetime import datetime
-from fastapi import Response
 from sqlmodel import Session, select
 from ..models import Post, LedgerTx, EventLog, Notification
-from ..main import NODE_PUBLIC_KEY_PEM
+from ..core.config import settings
+from ..core.node_signing import load_or_create_node_key, public_key_pem
+
+
+def _node_public_key_pem() -> str:
+    _, pub = load_or_create_node_key(settings.NODE_KEY_PATH)
+    return public_key_pem(pub)
+
 
 def export_audit_zip(session: Session) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         meta = {
             "exported_at": datetime.utcnow().isoformat()+"Z",
-            "public_key_pem": NODE_PUBLIC_KEY_PEM
+            "public_key_pem": _node_public_key_pem(),
         }
         z.writestr("meta.json", json.dumps(meta, indent=2))
 

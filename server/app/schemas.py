@@ -5,6 +5,7 @@ class RegisterIn(BaseModel):
     handle: str = Field(min_length=3, max_length=32)
     email: Optional[str] = None
     password: str = Field(min_length=6, max_length=128)
+    invite_code: Optional[str] = None
 
 class LoginIn(BaseModel):
     handle: str
@@ -24,6 +25,7 @@ class BoardOut(BaseModel):
     slug: str
     title: str
     description: str
+    is_premium: bool = False
     subscribed: bool = False
 
 class ThreadOut(BaseModel):
@@ -45,6 +47,7 @@ class CreateBoardIn(BaseModel):
     slug: str
     title: str
     description: str = ""
+    is_premium: bool = False
 
 class CreateThreadIn(BaseModel):
     title: str
@@ -87,3 +90,20 @@ class ToggleWatchIn(BaseModel):
 
 class MarkReadIn(BaseModel):
     read: bool = True
+
+
+class ReactIn(BaseModel):
+    reaction: str = Field(min_length=1, max_length=24)
+
+class UpdateBioIn(BaseModel):
+    bio: str = ""
+
+
+class CreateVoteIn(BaseModel):
+    title: str
+    proposal_type: str = "feature"
+    details_md: str = ""
+
+class CastVoteIn(BaseModel):
+    vote: str = "yes"
+    rationale: str = ""

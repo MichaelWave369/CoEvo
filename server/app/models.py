@@ -1,12 +1,13 @@
-from __future__ import annotations
 from typing import Optional
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column
 from sqlalchemy.dialects.sqlite import JSON
 
+
 def utcnow() -> datetime:
     return datetime.utcnow()
+
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -14,9 +15,13 @@ class User(SQLModel, table=True):
     email: Optional[str] = Field(default=None, index=True)
     password_hash: str
     role: str = Field(default="user")
+    bio: str = Field(default="")
+    reputation: int = Field(default=0)
+    invited_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="user")
+
 
 class Agent(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -24,9 +29,13 @@ class Agent(SQLModel, table=True):
     model: str = Field(default="ollama:llama3")
     autonomy_mode: str = Field(default="assistant")  # assistant|peer|explorer
     is_enabled: bool = Field(default=True)
+    bio: str = Field(default="")
+    origin_story: str = Field(default="")
+    reputation: int = Field(default=0)
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="agent")
+
 
 class Board(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -34,14 +43,17 @@ class Board(SQLModel, table=True):
     title: str
     description: str = Field(default="")
     is_private: bool = Field(default=False)
+    is_premium: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
     threads: list["Thread"] = Relationship(back_populates="board")
+
 
 class BoardSubscription(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     board_id: int = Field(foreign_key="board.id", primary_key=True)
     created_at: datetime = Field(default_factory=utcnow)
+
 
 class Thread(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -52,14 +64,16 @@ class Thread(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
-    board: Board = Relationship(back_populates="threads")
+    board: "Board" = Relationship(back_populates="threads")
     posts: list["Post"] = Relationship(back_populates="thread")
     bounties: list["Bounty"] = Relationship(back_populates="thread")
+
 
 class ThreadWatch(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     thread_id: int = Field(foreign_key="thread.id", primary_key=True)
     created_at: datetime = Field(default_factory=utcnow)
+
 
 class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -69,6 +83,7 @@ class Notification(SQLModel, table=True):
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utcnow)
     read_at: Optional[datetime] = Field(default=None)
+
 
 class Post(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -81,7 +96,8 @@ class Post(SQLModel, table=True):
     is_hidden: bool = Field(default=False)
     signature: Optional[str] = Field(default=None)
 
-    thread: Thread = Relationship(back_populates="posts")
+    thread: "Thread" = Relationship(back_populates="posts")
+
 
 class Artifact(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -96,9 +112,11 @@ class Artifact(SQLModel, table=True):
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utcnow)
 
+
 class ThreadArtifact(SQLModel, table=True):
     thread_id: int = Field(foreign_key="thread.id", primary_key=True)
     artifact_id: int = Field(foreign_key="artifact.id", primary_key=True)
+
 
 class RepoLink(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -109,6 +127,7 @@ class RepoLink(SQLModel, table=True):
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utcnow)
 
+
 class Wallet(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     owner_type: str = Field(default="user")  # user|agent|system
@@ -117,8 +136,9 @@ class Wallet(SQLModel, table=True):
     balance: int = Field(default=0)
     updated_at: datetime = Field(default_factory=utcnow)
 
-    user: Optional[User] = Relationship(back_populates="wallet")
-    agent: Optional[Agent] = Relationship(back_populates="wallet")
+    user: Optional["User"] = Relationship(back_populates="wallet")
+    agent: Optional["Agent"] = Relationship(back_populates="wallet")
+
 
 class LedgerTx(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -130,6 +150,7 @@ class LedgerTx(SQLModel, table=True):
     ref_id: Optional[int] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=utcnow)
     signature: Optional[str] = Field(default=None)
+
 
 class Bounty(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -143,7 +164,8 @@ class Bounty(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     closed_at: Optional[datetime] = Field(default=None)
 
-    thread: Thread = Relationship(back_populates="bounties")
+    thread: "Thread" = Relationship(back_populates="bounties")
+
 
 class EventLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -152,9 +174,63 @@ class EventLog(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     signature: Optional[str] = Field(default=None)
 
+
 class PostReport(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     post_id: int = Field(foreign_key="post.id", index=True)
     reporter_user_id: int = Field(foreign_key="user.id", index=True)
     reason: str = Field(default="")
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class InviteCode(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    inviter_user_id: int = Field(foreign_key="user.id", index=True)
+    code: str = Field(index=True, unique=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class InviteRedemption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    invite_code_id: int = Field(foreign_key="invitecode.id", index=True)
+    invitee_user_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    rewarded_on_first_post: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class PostReaction(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id", index=True)
+    reaction: str = Field(index=True)
+    by_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class VoteProposal(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    proposal_type: str = Field(default="feature")
+    details_md: str = Field(default="")
+    proposed_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    proposed_by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id")
+    status: str = Field(default="open")
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class VoteBallot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    proposal_id: int = Field(foreign_key="voteproposal.id", index=True)
+    voter_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    voter_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
+    vote: str = Field(default="yes")
+    rationale: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class ThreadSummary(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    thread_id: int = Field(foreign_key="thread.id", unique=True, index=True)
+    summary_post_id: int = Field(foreign_key="post.id")
+    source_post_count: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=utcnow)
