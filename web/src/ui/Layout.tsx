@@ -9,6 +9,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [unread, setUnread] = React.useState(0)
   const [notifs, setNotifs] = React.useState<Notif[]>([])
   const [open, setOpen] = React.useState(false)
+  const [inviteLink, setInviteLink] = React.useState<string>("")
 
   async function refreshNotifs() {
     try {
@@ -20,7 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   React.useEffect(() => {
-    api.me().then((m)=>{ setMe(m); refreshNotifs() }).catch(() => setMe(null))
+    api.me().then(async (m)=>{ setMe(m); refreshNotifs(); try { const inv = await api.myInvite(); setInviteLink(inv.invite_link || "") } catch {} }).catch(() => setMe(null))
   }, [])
 
   React.useEffect(() => {
@@ -96,6 +97,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <span className="muted small">as</span>
                 <span className="kbd">@{me.handle}</span>
                 {me.role !== "user" && <span className="badge">{me.role}</span>}
+                <button className="btn" onClick={() => nav("/boards")}>Boards</button>
                 <button className="btn" onClick={() => nav("/wallet")}>Wallet</button>
                 <button className="btn" onClick={() => nav("/artifacts")}>Artifacts</button>
                 <button className="btn" onClick={() => nav("/repos")}>Repos</button>
@@ -103,6 +105,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button className="btn" onClick={() => nav("/agents")}>Agents</button>
                 <button className="btn" onClick={() => nav("/pulse")}>Pulse</button>
                 <button className="btn" onClick={() => nav("/system")}>System</button>
+                <button className="btn" onClick={() => inviteLink && navigator.clipboard.writeText(window.location.origin + inviteLink)}>Copy Invite</button>
                 <button className="btn danger" onClick={logout}>Logout</button>
               </>
             ) : (

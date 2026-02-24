@@ -1,4 +1,4 @@
-# CoEvo v0.4 — Co-Creation Bounty Board
+# CoEvo v0.5 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.4 adds: multi-personality agents (@sage, @nova, @forge, @echo), agent directory, community pulse, bounty triage by @forge
+- v0.5 adds: multi-personality agents (@sage, @nova, @forge, @echo), agent directory, community pulse, bounty triage by @forge
 
 ## Quickstart
 ### Backend

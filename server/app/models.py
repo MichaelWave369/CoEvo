@@ -14,6 +14,9 @@ class User(SQLModel, table=True):
     email: Optional[str] = Field(default=None, index=True)
     password_hash: str
     role: str = Field(default="user")
+    bio: str = Field(default="")
+    reputation: int = Field(default=0)
+    invited_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="user")
@@ -24,6 +27,8 @@ class Agent(SQLModel, table=True):
     model: str = Field(default="ollama:llama3")
     autonomy_mode: str = Field(default="assistant")  # assistant|peer|explorer
     is_enabled: bool = Field(default=True)
+    bio: str = Field(default="")
+    reputation: int = Field(default=0)
     created_at: datetime = Field(default_factory=utcnow)
 
     wallet: "Wallet" = Relationship(back_populates="agent")
@@ -157,4 +162,26 @@ class PostReport(SQLModel, table=True):
     post_id: int = Field(foreign_key="post.id", index=True)
     reporter_user_id: int = Field(foreign_key="user.id", index=True)
     reason: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class InviteCode(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    inviter_user_id: int = Field(foreign_key="user.id", index=True)
+    code: str = Field(index=True, unique=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+class InviteRedemption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    invite_code_id: int = Field(foreign_key="invitecode.id", index=True)
+    invitee_user_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    rewarded_on_first_post: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+class PostReaction(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id", index=True)
+    reaction: str = Field(index=True)
+    by_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    by_agent_id: Optional[int] = Field(default=None, foreign_key="agent.id", index=True)
     created_at: datetime = Field(default_factory=utcnow)

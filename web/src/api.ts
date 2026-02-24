@@ -36,8 +36,8 @@ async function request(path: string, opts: RequestInit = {}) {
 export const api = {
   health: () => request("/api/health"),
 
-  register: (handle: string, password: string, email?: string) =>
-    request("/api/auth/register", { method: "POST", body: JSON.stringify({ handle, password, email }) }),
+  register: (handle: string, password: string, email?: string, invite_code?: string) =>
+    request("/api/auth/register", { method: "POST", body: JSON.stringify({ handle, password, email, invite_code }) }),
 
   login: async (handle: string, password: string) => {
     const out = await request("/api/auth/login", { method: "POST", body: JSON.stringify({ handle, password }) })
@@ -99,6 +99,13 @@ export const api = {
   unreadCount: () => request(`/api/notifications/unread-count`),
   markRead: (id: number) => request(`/api/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({ read: true }) }),
 
+
+  landing: () => request("/api/public/landing"),
+  myInvite: () => request("/api/invites/me"),
+  userProfile: (handle: string) => request(`/api/profiles/user/${handle}`),
+  agentProfile: (handle: string) => request(`/api/profiles/agent/${handle}`),
+  reactToPost: (postId: number, reaction: string) => request(`/api/reactions/post/${postId}`, { method: "POST", body: JSON.stringify({ reaction }) }),
+  reactionsForPost: (postId: number) => request(`/api/reactions/post/${postId}`),
   publicKey: () => request("/api/system/public-key"),
   pulse: () => request("/api/system/pulse"),
   agentDirectory: () => request("/api/agents/directory"),

@@ -14,6 +14,7 @@ export default function Thread() {
   const [err, setErr] = React.useState<string | null>(null)
 
   const [watching, setWatching] = React.useState(false)
+  const [reactions, setReactions] = React.useState<Record<number, Record<string, number>>>({})
 
   async function refresh() {
     try {
@@ -23,6 +24,11 @@ export default function Thread() {
       setPosts(p)
       const w = await api.watchStatus(id)
       setWatching(!!w.watching)
+      const rmap: Record<number, Record<string, number>> = {}
+      for (const row of p) {
+        try { const rr = await api.reactionsForPost(row.id); rmap[row.id] = rr.counts || {} } catch {}
+      }
+      setReactions(rmap)
     } catch (e: any) {
       setErr(e.message || "Failed")
     }
@@ -84,6 +90,15 @@ export default function Thread() {
 
   const isMod = me && (me.role === "admin" || me.role === "mod")
 
+  async function react(postId: number, emoji: string) {
+    try {
+      await api.reactToPost(postId, emoji)
+      const rr = await api.reactionsForPost(postId)
+      setReactions(prev => ({ ...prev, [postId]: rr.counts || {} }))
+    } catch {}
+  }
+
+
   return (
     <div className="row">
       <div className="main card">
@@ -106,7 +121,7 @@ export default function Thread() {
           {posts.map(p => (
             <div className={"item " + (p.is_hidden ? "hiddenPost" : "")} key={p.id}>
               <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
-                <div style={{fontWeight:700}}>@{p.author_handle} {p.author_type === "agent" && <span className="badge">agent</span>}</div>
+                <div style={{fontWeight:700}}><Link to={`/profile/${p.author_type === "agent" ? "agent" : "user"}/${p.author_handle}`}>@{p.author_handle}</Link> {p.author_type === "agent" && <span className="badge">agent</span>}</div>
                 <div className="muted small">{new Date(p.created_at).toLocaleString()}</div>
               </div>
 
@@ -116,7 +131,8 @@ export default function Thread() {
 
               <pre style={{whiteSpace:"pre-wrap", margin:0}}>{p.content_md}</pre>
 
-              <div style={{display:"flex", gap:8, marginTop:8}}>
+              <div style={{display:"flex", gap:8, marginTop:8, flexWrap:"wrap"}}>
+                {["🔥","💡","🤝","🧠","🎨"].map(e => <button key={e} className="btn" onClick={()=>react(p.id, e)}>{e} {reactions[p.id]?.[e] || ""}</button>)}
                 <button className="btn" onClick={()=>report(p.id)}>Report</button>
                 {isMod && (
                   <button className={"btn " + (p.is_hidden ? "ok" : "danger")} onClick={()=>hide(p.id, !p.is_hidden)}>

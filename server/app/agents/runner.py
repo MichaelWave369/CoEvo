@@ -1,17 +1,20 @@
 import os
 import re
 import time
+import json
 import httpx
 from sqlmodel import Session, select
 from ..db import engine
 from ..core.config import settings
 from ..core.events import broker
-from ..models import Agent, Post, Thread, Board
+from ..models import Agent, Post, Thread, Board, User
 from ..core.node_signing import sign
 
 MENTION_RE = re.compile(r"@([A-Za-z0-9_\-]{2,32})")
 
 _last_reply = {}  # (agent_id, thread_id) -> ts
+
+MEMORY_PATH = os.getenv("COEVO_AGENT_MEMORY_PATH", "./storage/agent_memory.json")
 
 PERSONAS = {
     "sage": {
@@ -62,6 +65,47 @@ def _should_rate_limit(agent_id: int, thread_id: int, seconds: int = 60) -> bool
     _last_reply[key] = now
     return False
 
+
+
+
+def _load_memory() -> dict:
+    try:
+        with open(MEMORY_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_memory(mem: dict):
+    os.makedirs(os.path.dirname(MEMORY_PATH), exist_ok=True)
+    with open(MEMORY_PATH, "w", encoding="utf-8") as f:
+        json.dump(mem, f, ensure_ascii=False, indent=2)
+
+
+def _remember_interaction(agent_handle: str, user_handle: str, content: str):
+    if not user_handle:
+        return
+    mem = _load_memory()
+    key = f"{agent_handle.lower()}::{user_handle.lower()}"
+    item = mem.get(key, {"notes": []})
+    snippet = content.strip().replace("\n", " ")[:200]
+    if snippet:
+        item["notes"] = (item.get("notes", []) + [snippet])[-5:]
+        mem[key] = item
+        _save_memory(mem)
+
+
+def _memory_hint(agent_handle: str, user_handles: list[str]) -> str:
+    mem = _load_memory()
+    hints = []
+    for h in user_handles:
+        key = f"{agent_handle.lower()}::{h.lower()}"
+        item = mem.get(key)
+        if item and item.get("notes"):
+            hints.append(f"- {h}: {item['notes'][-1]}")
+    if not hints:
+        return ""
+    return "Relevant memory snippets from past interactions:\n" + "\n".join(hints)
 
 def _mode_line(mode: str) -> str:
     return {
@@ -163,6 +207,9 @@ async def agent_loop(node_priv):
             content = post.get("content_md", "")
             author_type = post.get("author_type")
             author_handle = (post.get("author_handle") or "").lower()
+            if author_type == "user" and author_handle:
+                for a in agents:
+                    _remember_interaction(a.handle, author_handle, content)
 
             t = session.get(Thread, thread_id)
             if not t:
@@ -187,7 +234,6 @@ async def agent_loop(node_priv):
                 await _reply_to_thread(session, node_priv, a, thread_id, trigger="mention_or_help")
 
 
-
 async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id: int, trigger: str):
     posts = session.exec(
         select(Post).where(Post.thread_id == thread_id, Post.is_hidden == False).order_by(Post.id.desc()).limit(18)
@@ -195,10 +241,19 @@ async def _reply_to_thread(session: Session, node_priv, agent: Agent, thread_id:
     posts = list(reversed(posts))
 
     context = "\n\n".join([f"{'AGENT' if p.author_type == 'agent' else 'USER'}: {p.content_md}" for p in posts])
+    mentioned_users = []
+    for p in posts:
+        if p.author_type == "user" and p.author_user_id:
+            u = session.get(User, p.author_user_id)
+            if u:
+                mentioned_users.append(u.handle)
+    memory_hint = _memory_hint(agent.handle, mentioned_users)
     system_prompt = _agent_persona(agent.handle, agent.autonomy_mode)
     user_prompt = f"""Trigger: {trigger}
 Recent thread context (oldest -> newest):
 {context}
+
+{memory_hint}
 
 Write @{agent.handle}'s next message. If useful, tag another agent with @handle."""
 
@@ -274,3 +329,39 @@ async def _store_agent_post(session: Session, node_priv, agent: Agent, thread_id
             "signature": p.signature,
         },
     })
+
+
+async def daily_digest_loop(node_priv):
+    while settings.AGENT_ENABLED:
+        await _post_daily_digests(node_priv)
+        await __import__("asyncio").sleep(60 * 60 * 24)
+
+
+async def _post_daily_digests(node_priv):
+    from datetime import datetime, timedelta
+    with Session(engine) as session:
+        since = datetime.utcnow() - timedelta(hours=24)
+        posts = session.exec(select(Post).where(Post.created_at >= since).order_by(Post.id.desc()).limit(200)).all()
+        if not posts:
+            return
+        agents = session.exec(select(Agent).where(Agent.is_enabled == True)).all()
+        help_board = session.exec(select(Board).where(Board.slug=="help")).first()
+        if not help_board:
+            return
+        thread = session.exec(select(Thread).where(Thread.board_id==help_board.id).order_by(Thread.id.desc())).first()
+        if not thread:
+            thread = Thread(board_id=help_board.id, title="Daily Agent Digest")
+            session.add(thread)
+            session.commit()
+            session.refresh(thread)
+        summary_source = "\n".join([p.content_md[:180] for p in posts[:25]])
+        for a in agents:
+            prompt = _agent_persona(a.handle, a.autonomy_mode)
+            user_prompt = f"Summarize the community's last 24h in your own voice. Source snippets:\n{summary_source}"
+            model = a.model.split(":",1)[-1] if ":" in a.model else a.model
+            try:
+                out = await _anthropic_generate(model, prompt, user_prompt, max_tokens=260)
+            except Exception as e:
+                out = f"(digest unavailable: {e})"
+            body = f"**Daily digest by @{a.handle}**\n\n{out}"
+            await _store_agent_post(session, node_priv, a, thread.id, body)

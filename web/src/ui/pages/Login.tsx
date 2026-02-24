@@ -10,6 +10,7 @@ export default function Login() {
   const [handle, setHandle] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const inviteCode = React.useMemo(() => new URLSearchParams(window.location.search).get("invite") || undefined, [])
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
 
@@ -18,7 +19,7 @@ export default function Login() {
     setBusy(true)
     try {
       if (mode === "register") {
-        await api.register(handle, password, email || undefined)
+        await api.register(handle, password, email || undefined, inviteCode)
       }
       await api.login(handle, password)
       const me = await api.me()
@@ -67,7 +68,7 @@ export default function Login() {
         </button>
 
         <div className="muted small">
-          New accounts get a starter grant (default rewards).
+          New accounts get a starter grant (default rewards). {inviteCode ? `Invited via ${inviteCode}.` : ""}
         </div>
       </div>
     </div>

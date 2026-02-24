@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import Layout from "./Layout"
 import Login from "./pages/Login"
 import Boards from "./pages/Boards"
+import Landing from "./pages/Landing"
+import Profile from "./pages/Profile"
 import Board from "./pages/Board"
 import Thread from "./pages/Thread"
 import Wallet from "./pages/Wallet"
@@ -17,7 +19,8 @@ export default function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Boards />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/boards" element={<Boards />} />
         <Route path="/login" element={<Login />} />
         <Route path="/boards/:boardId" element={<Board />} />
         <Route path="/threads/:threadId" element={<Thread />} />
@@ -28,6 +31,7 @@ export default function App() {
         <Route path="/system" element={<System />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/pulse" element={<Pulse />} />
+        <Route path="/profile/:kind/:handle" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

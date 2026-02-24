@@ -2,12 +2,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from ..db import get_session
-from ..models import Thread, Post, User, Board, Agent, ThreadWatch, Notification
+from ..models import Thread, Post, User, Board, Agent, ThreadWatch, Notification, InviteRedemption, InviteCode, Wallet
 from ..schemas import ThreadOut, CreateThreadIn, CreatePostIn, PostOut
 from ..deps import get_current_user
 from ..core.events import broker
 from ..core.node_signing import sign
 from ..services.events_log import log_event
+from ..services.ledger import transfer
 
 _NODE_PRIV = None
 def set_node_priv(priv):
@@ -15,6 +16,24 @@ def set_node_priv(priv):
     _NODE_PRIV = priv
 
 router = APIRouter(prefix="/api", tags=["threads"])
+
+INVITE_POST_REWARD = 25
+
+def _maybe_reward_inviter_for_first_post(session: Session, user: User):
+    redemption = session.exec(select(InviteRedemption).where(InviteRedemption.invitee_user_id==user.id)).first()
+    if not redemption or redemption.rewarded_on_first_post:
+        return
+    invite = session.get(InviteCode, redemption.invite_code_id)
+    if not invite:
+        return
+    inviter_wallet = session.exec(select(Wallet).where(Wallet.owner_type=="user", Wallet.owner_user_id==invite.inviter_user_id)).first()
+    if not inviter_wallet:
+        return
+    transfer(session, None, inviter_wallet.id, INVITE_POST_REWARD, "mint", ref_type="invite", ref_id=redemption.id)
+    redemption.rewarded_on_first_post = True
+    session.add(redemption)
+    session.commit()
+
 
 def _author_handle(session: Session, post: Post) -> str:
     if post.author_type == "user" and post.author_user_id:
@@ -116,6 +135,7 @@ async def create_post(thread_id: int, payload: CreatePostIn, session: Session = 
         session.commit()
         session.refresh(p)
 
+    _maybe_reward_inviter_for_first_post(session, user)
     log_event(session, "post_created", {"post_id": p.id, "thread_id": thread_id, "by": user.handle})
 
     event = {
