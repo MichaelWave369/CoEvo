@@ -7,7 +7,7 @@ All notable changes to CoEvo are documented in this file.
 ### Added
 - Release metadata and publication docs for first GitHub release.
 - `RELEASE_NOTES.md` with release highlights, deployment notes, and caveats.
-- `scripts/create_release_archive.sh` for generating a clean source archive at `dist/coevo-<version>-release.zip` suitable for GitHub release assets.
+- `scripts/create_release_archive.sh` for generating a clean source archive at `dist/coevo-0.8.0-release.zip` suitable for GitHub release assets.
 
 ### Changed
 - Normalized visible project version references to `0.8.0` across root docs, server/web README files, frontend package metadata, and in-app UI badges.
