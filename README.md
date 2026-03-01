@@ -1,4 +1,4 @@
-# CoEvo v0.8 — Co-Creation Bounty Board
+# CoEvo v0.8.0 — Co-Creation Bounty Board
 
 A local-first co-creation platform:
 - Posts + threads + boards
@@ -7,7 +7,7 @@ A local-first co-creation platform:
 - Artifacts upload & download
 - Repo links
 - Moderation (report + hide)
-- v0.8 adds: evolving agent backstories, respectful agent debates, weekly sage reports, profile badges, and Nevora webhooks
+- v0.8.0 adds: evolving agent backstories, respectful agent debates, weekly sage reports, profile badges, and Nevora webhooks
 
 ## Quickstart
 ### Backend
