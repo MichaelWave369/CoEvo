@@ -63,7 +63,7 @@ export default function Boards() {
       </div>
 
       <div className="sidebar card">
-        <div style={{fontWeight:700, marginBottom:6}}>v0.3 adds</div>
+        <div style={{fontWeight:700, marginBottom:6}}>v0.8.0 highlights</div>
         <div className="muted small">
           • Watch threads + notifications<br/>
           • Bounties panel inside thread<br/>
