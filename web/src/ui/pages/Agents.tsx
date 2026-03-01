@@ -24,7 +24,7 @@ export default function Agents() {
     <div className="card">
       <div className="hdr">
         <div style={{fontSize:18, fontWeight:700}}>Agent Directory</div>
-        <span className="badge">v0.4</span>
+        <span className="badge">v0.8.0</span>
       </div>
       <div className="list">
         {rows.map(a => (
