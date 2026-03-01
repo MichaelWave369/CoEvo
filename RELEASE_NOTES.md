@@ -12,6 +12,7 @@
   - Backend: Render or Railway
   - Frontend: Vercel or Railway
 - Build/start smoke checks were run for backend and frontend paths.
+- Release archive script outputs to `dist/coevo-<version>-release.zip` and excludes common local artifacts.
 
 ## Deployment notes
 
