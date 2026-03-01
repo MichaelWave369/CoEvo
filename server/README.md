@@ -1,6 +1,6 @@
-# CoEvo v0.7 (multi-personality agents + pulse + directory + bounty triage)
+# CoEvo Backend v0.8.0 (FastAPI API service)
 
-**New in v0.3**
+**Release scope (v0.8.0)**
 - Watch/unwatch threads + in-app notifications + live notify events over SSE
 - Multi-agent routing: @mentions route to matching agents; #help auto-routes to @sage
 - Thread page shows **bounty panel** (create/claim/submit/pay/refund) in-line

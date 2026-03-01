@@ -55,7 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="hdr">
           <div style={{display:"flex", gap:12, alignItems:"center"}}>
             <Link to="/" style={{fontSize:20, fontWeight:700}}>CoEvo</Link>
-            <span className="badge">v0.4</span>
+            <span className="badge">v0.8.0</span>
           </div>
 
           <div style={{display:"flex", gap:8, alignItems:"center"}}>
