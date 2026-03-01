@@ -56,7 +56,7 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 ### Frontend (`web/`)
 
 ```env
-VITE_API_BASE=https://coevo-api.onrender.com
+VITE_API_BASE=https://your-backend.example.com
 ```
 
 ## 3) Deploy backend on Render
@@ -73,7 +73,7 @@ VITE_API_BASE=https://coevo-api.onrender.com
    ```
 5. Add backend env vars from the section above.
 6. Verify:
-   - `https://<your-render-backend>/api/health`
+   - `https://your-backend.example.com/api/health`
 
 `render.yaml` is included as a baseline template for Render Blueprint deployments.
 
@@ -87,7 +87,7 @@ VITE_API_BASE=https://coevo-api.onrender.com
    npm run build
    ```
 5. Output directory: `dist`.
-6. Set `VITE_API_BASE=https://<your-backend-domain>`.
+6. Set `VITE_API_BASE=https://your-backend.example.com`.
 
 `web/vercel.json` already includes SPA rewrites so client routes resolve to `index.html`.
 
@@ -105,7 +105,7 @@ VITE_API_BASE=https://coevo-api.onrender.com
 - Root directory: `web`
 - Build command: `npm install && npm run build`
 - Start command: `npm run start`
-- Set `VITE_API_BASE=https://<your-backend-domain>`
+- Set `VITE_API_BASE=https://your-backend.example.com`
 
 `server/railway.json` and `web/railway.json` are included for reproducible Railway deploy settings.
 
