@@ -1,4 +1,4 @@
-# CoEvo Web GUI (v0.3)
+# CoEvo Web GUI (v0.8.0)
 
 Run:
 ```bash
