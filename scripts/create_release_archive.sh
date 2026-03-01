@@ -17,7 +17,10 @@ zip -r "$ARCHIVE_PATH" . \
   -x "*/node_modules/*" \
   -x "*/.venv/*" \
   -x "*/__pycache__/*" \
+  -x "*/.pytest_cache/*" \
   -x "*.pyc" \
+  -x "*.sqlite" \
+  -x "*.sqlite3" \
   -x "web/dist/*" \
   -x "dist/*" \
   -x "server/coevo.db" \
